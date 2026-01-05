@@ -1,7 +1,7 @@
 ; hello-os
 ; TAB=4
 
-CYLS	EQU	10
+	CYLS	EQU	10
 
 	ORG	0x7c00			; location which this program located in memory
 
