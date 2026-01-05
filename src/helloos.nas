@@ -1,0 +1,49 @@
+; hello-os
+; TAB=4
+
+; FAT12 Format
+
+	DB	0xeb, 0x4e, 0x90
+	DB	"HELLOIPL"			; Bootsector name
+	DW	512				; size of 1 sector
+	DB	1				; size of cluster (1 sector/cluster)
+	DW	1				; numbers of reserved sectors
+	DB	2				; numbers of FAT tables
+	DW	224				; numbers of Entry for root directory
+	DW	2880				; total numbers of sector in disk
+	DB	0xf0				; midea type
+	DW	9				; numbers of sector for one FAT table
+	DW	18				; numbers of sector for one track
+	DW	2				; numbers of head
+	DD	0				; we don't use partition
+	DD	2880				; drive size
+	DB	0, 0, 0x29			; what..?
+	DD	0xffffffff			; volume serial number
+	DB	"HELLO-OS"			; name of disk
+	DB	"FAT12   "			; name of format(8bytes)
+	RESB	18				; remain 18bytes
+
+; Program body
+
+	DB	0xb8, 0x00, 0x00, 0x8e, 0xd0, 0xbc, 0x00, 0x7c
+	DB	0x8e, 0xd8, 0x8e, 0xc0, 0xbe, 0x73, 0x7c, 0x8a
+	DB	0x04, 0x83, 0xc6, 0x01, 0x3c, 0x00, 0x74, 0x09
+	DB	0xb4, 0x0e, 0xbb, 0x0f, 0x00, 0xcd, 0x10, 0xeb
+	DB	0xee, 0xf4, 0xeb, 0xfd
+
+; Message section
+
+	DB	0x0a, 0x0a		; two line break
+	DB	"hello, minwook"
+	DB	0x0a			; line break
+	DB	0
+
+	RESB	0x1fe-$			; fill 0x00 to 0x1fe
+	DB	0x55, 0xaa
+
+; not bootsector
+
+	DB	0xf0, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00
+	RESB	4600
+	DB	0xf0, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00
+	RESB	1469432
