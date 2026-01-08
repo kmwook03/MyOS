@@ -27,7 +27,8 @@ VRAM	EQU	0x0ff8	; graphic buffer address
 		MOV	AH, 0x02
 		INT	0x16
 		MOV	[LEDS], AL
-
+		
+		; PIC don't receive any interrupt
 		MOV	AL,	0xff
 		OUT	0x21,	AL
 		NOP
@@ -35,19 +36,20 @@ VRAM	EQU	0x0ff8	; graphic buffer address
 
 		CLI
 
-		CALL	waitkbdout
+		; set A20GATE to allow the CPU to access more than 1MB of Memory
+		CALL	waitkbdout ; wait keyboard out
 		MOV	AL,	0xd1
 		OUT	0x64, AL
 		CALL	waitkbdout
-		MOV	AL, 0xdf
+		MOV	AL, 0xdf	; enable A20
 		OUT	0x60, AL
 		CALL	waitkbdout
 
 [INSTRSET	"i486p"]
 		LGDT	[GDTR0]
 		MOV	EAX, CR0
-		AND	EAX, 0x7fffffff
-		OR	EAX, 0x00000001
+		AND	EAX, 0x7fffffff	; bit31 -> 0 : No paging
+		OR	EAX, 0x00000001	; bit1 -> 1 : go to protected mode
 		MOV	CR0, EAX
 		JMP	pipelineflush
 	
@@ -59,24 +61,28 @@ VRAM	EQU	0x0ff8	; graphic buffer address
 		MOV GS, AX
 		MOV	SS, AX
 
-		MOV	ESI, bootpack
-		MOV	EDI, BOTPAK
+		; send bootpack
+		MOV	ESI, bootpack ; sender
+		MOV	EDI, BOTPAK   ; receiver
 		MOV	ECX, 512*1024/4
 		CALL	memcpy
 
-		MOV	ESI, 0x7c00
-		MOV	EDI, DSKCAC
+		; send disk data
+		; boot sector
+		MOV	ESI, 0x7c00    ; sender
+		MOV	EDI, DSKCAC    ; receiver
 		MOV	ECX, 512/4
 		CALL	memcpy
-
+		; remain
 		MOV	ESI, DSKCAC0+512
 		MOV	EDI, DSKCAC+512
 		MOV	ECX, 0
 		MOV	CL, BYTE [CYLS]
-		IMUL	ECX, 512*18*2/4
-		SUB	ECX, 512/4
+		IMUL	ECX, 512*18*2/4	; transform from CYLS to bytes / 4
+		SUB	ECX, 512/4			; minus /IPL size
 		CALL	memcpy
 
+		; bootpack
 		MOV	EBX, BOTPAK
 		MOV	ECX, [EBX+16]
 		ADD	ECX, 3
@@ -85,9 +91,9 @@ VRAM	EQU	0x0ff8	; graphic buffer address
 		MOV	ESI, [EBX+20]
 		ADD	ESI, EBX
 		MOV	EDI, [EBX+12]
-		CALL	memcpy
+		CALL	memcpy		; copy bootpack.hrb[0x10c8 - 0x11a8] to 0x00410000
 	skip:
-		MOV	ESP, [EBX+12]
+		MOV	ESP, [EBX+12]	; init stack
 		JMP	DWORD	2*8:0x0000001b
 	
 	waitkbdout:
@@ -105,7 +111,7 @@ VRAM	EQU	0x0ff8	; graphic buffer address
 		JNZ	memcpy
 		RET
 
-		ALIGNB	16
+		ALIGNB	16		; make address of GDT0 into a multiple of eight
 	
 	GDT0:
 		RESB	8
