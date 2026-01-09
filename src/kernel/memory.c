@@ -6,7 +6,7 @@
 #define CR0_CACHE_DISABLE  0x60000000
 
 unsigned int memtest(unsigned int start, unsigned int end)
-{
+{                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
     char flg486 = 0;
     unsigned int eflg, cr0, i;
 
