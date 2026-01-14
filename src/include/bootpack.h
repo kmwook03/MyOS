@@ -262,6 +262,7 @@ void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c);
 struct CONSOLE {
     struct SHEET *sht;
     int cur_x, cur_y, cur_c;
+    struct TIMER *timer;
 };
 void console_task(struct SHEET *sht, int memtotal);
 void cons_putchar(struct CONSOLE *cons, int chr, char move);
