@@ -4,6 +4,8 @@ void api_initmalloc(void);
 char *api_malloc(int size);
 void api_point(int win, int x, int y, int col);
 void api_refreshwin(int win, int x0, int y0, int x1, int y1);
+void api_closewin(int win);
+int api_getkey(int mode);
 void api_end(void);
 
 int rand(void);
@@ -12,7 +14,6 @@ void HariMain(void)
 {
     char *buf;
     int win, i, x, y;
-    unsigned int r;
     api_initmalloc();
 
     buf = api_malloc(150 * 100);
@@ -25,5 +26,11 @@ void HariMain(void)
         api_point(win+1, x, y, 3);
     }
     api_refreshwin(win, 6, 26, 144, 94);
+    for (;;) {
+        if (api_getkey(1) == 0x0a) {
+            break;
+        }
+    }
+    api_closewin(win);
     api_end();
 }
