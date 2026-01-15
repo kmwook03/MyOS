@@ -171,13 +171,14 @@ struct SHEET {
     unsigned char *buf;
     int bxsize, bysize, vx0, vy0, col_inv, height, flags;
     struct SHTCTL *ctl;
+    struct TASK *task;
 };
 
 struct SHTCTL {
     unsigned char *vram, *map;
     int xsize, ysize, top;
-    struct SHEET *sheets[MAX_SHEETS];
-    struct SHEET sheets0[MAX_SHEETS];
+    struct SHEET *sheets[MAX_SHEETS]; // pointers to the sheets in display order
+    struct SHEET sheets0[MAX_SHEETS]; // actual sheets
 };
 
 struct SHTCTL *shtctl_init(struct MEMMAN *memman, unsigned char *vram, int xsize, int ysize);
@@ -193,7 +194,8 @@ void sheet_free(struct SHEET *sht);
 
 struct TIMER {
     struct TIMER *next;
-    unsigned int timeout, flags;
+    unsigned int timeout;
+    char flags, flags2;
     struct FIFO32 *fifo;
     int data;
 };
@@ -209,6 +211,8 @@ struct TIMER *timer_alloc(void);
 void timer_free(struct TIMER *timer);
 void timer_init(struct TIMER *timer, struct FIFO32 *fifo, int data);
 void timer_settime(struct TIMER *timer, unsigned int timeout);
+int timer_cancel(struct TIMER *timer);
+void timer_cancelall(struct FIFO32 *fifo);
 void inthandler20(int *esp);
 
 // mtask.c
@@ -255,6 +259,7 @@ void task_sleep(struct TASK *task);
 // window.c
 void make_window8(unsigned char *buf, int xsize, int ysize, char *title, char act);
 void make_wtitle8(unsigned char *buf, int xsize, char *title, char act);
+void change_wtitle8(struct SHEET *sht, char act);
 void putfonts8_asc_sht(struct SHEET *sht, int x, int y, int c, int b, char *s, int l);
 void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c);
 

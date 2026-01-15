@@ -39,6 +39,7 @@ struct SHEET *sheet_alloc(struct SHTCTL *ctl)
             sht = &ctl->sheets0[i];
             sht->flags = SHEET_USE; // mark as used
             sht->height = -1; // hide the sheet
+            sht->task = 0; // no associated task
             return sht;
         }
     }
