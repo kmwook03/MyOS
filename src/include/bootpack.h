@@ -229,6 +229,12 @@ struct TSS32 {              // Task State Segment
 	int ldtr, iomap;
 };
 
+struct FILEHANDLE {
+    char *buf;
+    int size;
+    int pos;
+};
+
 struct TASK {
     int sel, flags;                     // selector(number of GDT) and status
     int level, priority;                // level and priority
@@ -237,6 +243,9 @@ struct TASK {
     struct SEGMENT_DESCRIPTOR ldt[2];   // local descriptor table
     struct CONSOLE *cons;               // console associated with this task
     int ds_base, cons_stack;            // data segment base address
+    struct FILEHANDLE *fhandle;         // file handle
+    int *fat;                           // file allocation table
+    char *cmdline;                      // command line
 };
 
 struct TASKLEVEL {

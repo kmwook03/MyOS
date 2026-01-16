@@ -98,6 +98,7 @@ $(IMG_DIR)/haribote.img: $(OUT_DIR)/ipl10.bin $(IMG_DIR)/haribote.sys $(APP_TARG
 		wbinimg src:$(OUT_DIR)/ipl10.bin len:512 from:0 to:0 \
 		copy from:$(IMG_DIR)/haribote.sys to:@: \
 		$(foreach app, $(APP_TARGETS), copy from:$(app) to:@: ) \
+		copy from:src/boot/ipl10.nas to:@: \
 		imgout:$@
 
 iso : $(IMG_DIR)/haribote.img
