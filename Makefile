@@ -16,19 +16,24 @@ BIM2HRB = $(TOOLPATH)/bim2hrb
 RULEFILE = $(TOOLPATH)/haribote/haribote.rul
 EDIMG = $(TOOLPATH)/edimg
 FDIMG2ISO = $(TOOLPATH)/makeiso/fdimg2iso
+GOLIB = $(TOOLPATH)/golib00
+
 QEMU = qemu-system-i386
 
 COPY = cp
 DEL = rm -f
 
 # -- Source Path --
-VPATH = src/kernel:src/boot:src/asm:src/graphics/font:src/app
+VPATH = src/kernel:src/boot:src/asm:src/graphics/font:app/src:app/api
 
-# -- APP --
-# (.c -> .hrb)
-SRC_APP_C   = $(wildcard src/app/*.c)
-# (.nas -> .hrb)
-APP_TARGETS = $(patsubst src/app/%.c, $(APP_OUT_DIR)/%.hrb, $(SRC_APP_C))
+# -- APP API --
+API_SRC = $(wildcard app/api/api*.nas)
+API_OBJS = $(patsubst app/api/%.nas, $(APP_OUT_DIR)/api/%.obj, $(API_SRC))
+API_LIB = $(APP_OUT_DIR)/api/apilib.lib
+
+# -- Application Targets --
+APP_SRC_C   = $(wildcard app/src/*.c)
+APP_TARGETS = $(patsubst app/src/%.c, $(APP_OUT_DIR)/%.hrb, $(APP_SRC_C))
 
 # -- Kernel Objects --
 OBJS_BOOTPACK = $(OUT_DIR)/bootpack.obj $(OUT_DIR)/naskfunc.obj $(OUT_DIR)/hankaku.obj $(OUT_DIR)/graphic.obj $(OUT_DIR)/dsctbl.obj \
@@ -37,26 +42,28 @@ OBJS_BOOTPACK = $(OUT_DIR)/bootpack.obj $(OUT_DIR)/naskfunc.obj $(OUT_DIR)/hanka
 
 # -- Build Rule --
 default :
-	@mkdir -p $(OUT_DIR) $(APP_OUT_DIR) $(IMG_DIR)
+	@mkdir -p $(OUT_DIR) $(APP_OUT_DIR)/api $(IMG_DIR)
 	$(MAKE) $(IMG_DIR)/haribote.img
+
+# -- API Lib Build --
+$(API_LIB) : $(API_OBJS)
+	@mkdir -p $(APP_OUT_DIR)/api
+	$(GOLIB) $(API_OBJS) out:$@
+
+# -- Application Build --
+$(APP_OUT_DIR)/%.hrb : app/src/%.c $(API_LIB)
+	@mkdir -p $(APP_OUT_DIR)/$*
+	$(CC1) -o $(APP_OUT_DIR)/$*/$*.gas $<
+	$(GAS2NASK) $(APP_OUT_DIR)/$*/$*.gas $(APP_OUT_DIR)/$*/$*.nas
+	$(NASK) $(APP_OUT_DIR)/$*/$*.nas $(APP_OUT_DIR)/$*/$*.obj $(APP_OUT_DIR)/$*/$*.lst
+	$(OBJ2BIM) @$(RULEFILE) out:$(APP_OUT_DIR)/$*/$*.bim map:$(APP_OUT_DIR)/$*/$*.map $(APP_OUT_DIR)/$*/$*.obj $(API_LIB)
+	$(BIM2HRB) $(APP_OUT_DIR)/$*/$*.bim $@ 0
 
 # -- Kernel Build --
 $(OUT_DIR)/bootpack.bim : $(OBJS_BOOTPACK)
 	$(OBJ2BIM) @$(RULEFILE) out:$@ stack:3136k map:$(subst .bim,.map,$@) $(OBJS_BOOTPACK)
 
 $(OUT_DIR)/bootpack.hrb : $(OUT_DIR)/bootpack.bim
-	$(BIM2HRB) $< $@ 0
-
-# -- Application Build --
-$(APP_OUT_DIR)/%.obj: src/app/%.c
-	$(CC1) -o $(APP_OUT_DIR)/$*.gas $<
-	$(GAS2NASK) $(APP_OUT_DIR)/$*.gas $(APP_OUT_DIR)/$*.nas
-	$(NASK) $(APP_OUT_DIR)/$*.nas $@ $(APP_OUT_DIR)/$*.lst
-
-$(APP_OUT_DIR)/%.bim: $(APP_OUT_DIR)/%.obj $(OUT_DIR)/app_nask.obj
-	$(OBJ2BIM) @$(RULEFILE) out:$@ map:$(subst .bim,.map,$@) $(APP_OUT_DIR)/$*.obj $(OUT_DIR)/app_nask.obj
-
-$(APP_OUT_DIR)/%.hrb: $(APP_OUT_DIR)/%.bim
 	$(BIM2HRB) $< $@ 0
 
 # -- Common Object Build --

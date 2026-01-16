@@ -13,7 +13,7 @@ void close_console(struct SHEET *sht);
 
 void HariMain(void)
 {
-	// Initialize Structures
+	// Declare Structures
 	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;  		// boot info from bootloader (0x0ff0 - 0x0fff)
 	struct SHTCTL *shtctl; 												// sheet control
 	struct FIFO32 fifo;                                         		// FIFO buffers for task communication
@@ -23,7 +23,7 @@ void HariMain(void)
 	struct SHEET *sht_back, *sht_mouse;									// sheets: background, mouse
 	struct TASK *task_a, *task_cons[2], *task;							// tasks: task_a, console task, etc task
 	struct CONSOLE *cons;												// console
-	struct SHEET *sht = 0, *key_win;									// active window sheet
+	struct SHEET *sht = 0, *key_win, *sht2;								// window sheet
 
 	// Declare Variables
 	// 1. Buffers
@@ -118,51 +118,55 @@ void HariMain(void)
 	// Activate Keyboard Window
 	keywin_on(key_win);
 
+	// Main Loop
 	for (;;) {
+		// Send keyboard LED status
 		if (fifo32_status(&keycmd) > 0 && keycmd_wait < 0) {
 			keycmd_wait = fifo32_get(&keycmd);
 			wait_KBC_sendready();
 			io_out8(PORT_KEYCMD, keycmd_wait);
 		}
-		io_cli();
-		if (fifo32_status(&fifo) == 0) {
-			if (new_mx >= 0) {
-				io_sti();
-				sheet_slide(sht_mouse, new_mx, new_my);
-				new_mx = -1;
-			} else if (new_wx != 0x7fffffff) {
-				io_sti();
-				sheet_slide(sht, new_wx, new_wy);
-				new_wx = 0x7fffffff;
-			} else {
-            	task_sleep(task_a);
-				io_sti();
+		io_cli(); // disable CPU interrupts
+		// Check FIFO buffer status
+		if (fifo32_status(&fifo) == 0) { // if empty
+			if (new_mx >= 0) { // if mouse moved
+				io_sti(); // enable CPU interrupts
+				sheet_slide(sht_mouse, new_mx, new_my); // move mouse sheet
+				new_mx = -1; // reset new mouse x position
+			} else if (new_wx != 0x7fffffff) { // if window moved
+				io_sti(); // enable CPU interrupts
+				sheet_slide(sht, new_wx, new_wy); // move window sheet
+				new_wx = 0x7fffffff; // reset new window x position
+			} else { // nothing to do, sleep
+            	task_sleep(task_a); // sleep main task
+				io_sti(); // enable CPU interrupts
 			}
-		} else {
-			i = fifo32_get(&fifo);
-			io_sti();
-			if (key_win != 0 && key_win->flags == 0) {
-				if (shtctl->top == 1) {
-					key_win = 0;
-				} else {
-					key_win = shtctl->sheets[shtctl->top - 1];
-					keywin_on(key_win);
+		} else { // if not empty
+			i = fifo32_get(&fifo); // get data from FIFO buffer
+			io_sti(); // enable CPU interrupts
+			if (key_win != 0 && key_win->flags == 0) { // if key_win is closed
+				if (shtctl->top == 1) { // only background sheet remains
+					key_win = 0; // no active window
+				} else { // switch to next top sheet
+					key_win = shtctl->sheets[shtctl->top - 1]; // next top sheet
+					keywin_on(key_win); // activate it
 				}
 			}
-			if (256 <= i && i <= 511) { // keyboard data
+			// keyboard data processing logic
+			if (256 <= i && i <= 511) {
                 if (i < 256+0x80) { // convert to character
-					if (key_shift == 0) {
+					if (key_shift == 0) { // Lowercase
 						s[0] = keytable0[i - 256];
-					} else {
+					} else { // Uppercase
 						s[0] = keytable1[i - 256];
 					}
-				} else {
+				} else { // special keys
 					s[0] = 0;
 				}
-				if ('A' <= s[0] && s[0] <= 'Z') {
+				if ('A' <= s[0] && s[0] <= 'Z') { // alphabetic characters
 					if (((key_leds & 4) == 0 && key_shift == 0) ||
 						((key_leds & 4) != 0 && key_shift != 0)) {
-							s[0] += 0x20;
+							s[0] += 0x20; // convert to lowercase
 					}
 				}
 				if (s[0] != 0 && key_win != 0) { // printable character
@@ -295,6 +299,10 @@ void HariMain(void)
 												task_run(task, -1, 0);
 											} else { // is a console window
 												task = sht->task;
+												sheet_updown(sht, -1); // hide window
+												keywin_off(key_win);
+												key_win = shtctl->sheets[shtctl->top-1];
+												keywin_on(key_win);
 												io_cli(); // disable CPU interrupts
 												fifo32_put(&task->fifo, 4);
 												io_sti(); // enable CPU interrupts
@@ -324,6 +332,10 @@ void HariMain(void)
 				close_console(shtctl->sheets0 + (i - 768));
 			} else if (1024 <= i && i <= 2023) { // constask close signal
 				close_constask(taskctl->tasks0 + (i - 1024));
+			} else if (2024 <= i && i <= 2279) { // close console only
+				sht2 = shtctl->sheets0 + (i - 2024);
+				memman_free_4k(memman, (int) sht2->buf, 256 * 165);
+				sheet_free(sht2);
 			}
 		}
 	}

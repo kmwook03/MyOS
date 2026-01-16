@@ -107,6 +107,7 @@ void set_gatedesc(struct GATE_DESCRIPTOR *gd, int offset, int selector, int ar);
 #define LIMIT_BOTPAK    0x0007ffff
 #define AR_DATA32_RW    0x4092
 #define AR_CODE32_ER    0x409a
+#define AR_LDT          0x0082
 #define AR_TSS32        0x0089
 #define AR_INTGATE32    0x008e
 
@@ -229,12 +230,13 @@ struct TSS32 {              // Task State Segment
 };
 
 struct TASK {
-    int sel, flags;                 // selector(number of GDT) and status
-    int level, priority;            // level and priority
-    struct FIFO32 fifo;             // FIFO for task
-    struct TSS32 tss;               // task state segment
-    struct CONSOLE *cons;           // console associated with this task
-    int ds_base, cons_stack;        // data segment base address
+    int sel, flags;                     // selector(number of GDT) and status
+    int level, priority;                // level and priority
+    struct FIFO32 fifo;                 // FIFO for task
+    struct TSS32 tss;                   // task state segment
+    struct SEGMENT_DESCRIPTOR ldt[2];   // local descriptor table
+    struct CONSOLE *cons;               // console associated with this task
+    int ds_base, cons_stack;            // data segment base address
 };
 
 struct TASKLEVEL {
