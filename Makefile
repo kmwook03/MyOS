@@ -13,6 +13,7 @@ OBJ2BIM = $(TOOLPATH)/obj2bim
 MAKEFONT = $(TOOLPATH)/makefont
 BIN2OBJ = $(TOOLPATH)/bin2obj
 BIM2HRB = $(TOOLPATH)/bim2hrb
+BIM2BIN = $(TOOLPATH)/bim2bin
 RULEFILE = $(TOOLPATH)/haribote/haribote.rul
 EDIMG = $(TOOLPATH)/edimg
 FDIMG2ISO = $(TOOLPATH)/makeiso/fdimg2iso
@@ -38,7 +39,8 @@ APP_TARGETS = $(patsubst app/src/%.c, $(APP_OUT_DIR)/%.hrb, $(APP_SRC_C))
 # -- Kernel Objects --
 OBJS_BOOTPACK = $(OUT_DIR)/bootpack.obj $(OUT_DIR)/naskfunc.obj $(OUT_DIR)/hankaku.obj $(OUT_DIR)/graphic.obj $(OUT_DIR)/dsctbl.obj \
 				$(OUT_DIR)/int.obj $(OUT_DIR)/fifo.obj $(OUT_DIR)/keyboard.obj $(OUT_DIR)/mouse.obj $(OUT_DIR)/memory.obj $(OUT_DIR)/sheet.obj \
-				$(OUT_DIR)/timer.obj $(OUT_DIR)/mtask.obj $(OUT_DIR)/window.obj $(OUT_DIR)/console.obj $(OUT_DIR)/file.obj
+				$(OUT_DIR)/timer.obj $(OUT_DIR)/mtask.obj $(OUT_DIR)/window.obj $(OUT_DIR)/console.obj $(OUT_DIR)/file.obj $(OUT_DIR)/tek.obj
+
 
 # -- Build Rule --
 default :
@@ -50,14 +52,41 @@ $(API_LIB) : $(API_OBJS)
 	@mkdir -p $(APP_OUT_DIR)/api
 	$(GOLIB) $(API_OBJS) out:$@
 
+# -- Default Memory Size --
+STACK_DEFAULT = 1k
+MALLOC_DEFAULT = 0k
+
+# -- APP Specific Memory Size --
+STACK_bball = 52k
+STACK_invader = 90k
+STACK_calc = 4k
+STACK_gview = 4480k
+
+MALLOC_beepdown = 40k
+MALLOC_color = 56k
+MALLOC_invader = 48k
+MALLOC_timer = 40k
+MALLOC_walk = 48k
+
 # -- Application Build --
-$(APP_OUT_DIR)/%.hrb : app/src/%.c $(API_LIB)
+$(APP_OUT_DIR)/%/%.gas : app/src/%.c
 	@mkdir -p $(APP_OUT_DIR)/$*
-	$(CC1) -o $(APP_OUT_DIR)/$*/$*.gas $<
-	$(GAS2NASK) $(APP_OUT_DIR)/$*/$*.gas $(APP_OUT_DIR)/$*/$*.nas
-	$(NASK) $(APP_OUT_DIR)/$*/$*.nas $(APP_OUT_DIR)/$*/$*.obj $(APP_OUT_DIR)/$*/$*.lst
-	$(OBJ2BIM) @$(RULEFILE) out:$(APP_OUT_DIR)/$*/$*.bim map:$(APP_OUT_DIR)/$*/$*.map $(APP_OUT_DIR)/$*/$*.obj $(API_LIB)
-	$(BIM2HRB) $(APP_OUT_DIR)/$*/$*.bim $@ 0
+	$(CC1) -o $@ $<
+
+$(APP_OUT_DIR)/%/%.nas : $(APP_OUT_DIR)/%/%.gas
+	$(GAS2NASK) $< $@
+
+$(APP_OUT_DIR)/%/%.obj : $(APP_OUT_DIR)/%/%.nas
+	$(NASK) $< $@ $(APP_OUT_DIR)/$*/$*.lst
+
+$(APP_OUT_DIR)/%/%.bim : $(APP_OUT_DIR)/%/%.obj $(API_LIB)
+	$(OBJ2BIM) @$(RULEFILE) out:$@ map:$(APP_OUT_DIR)/$*/$*.map stack:$(if $(STACK_$*),$(STACK_$*),$(STACK_DEFAULT)) $< $(API_LIB)
+
+$(APP_OUT_DIR)/%/%.org : $(APP_OUT_DIR)/%/%.bim
+	$(BIM2HRB) $< $@ $(if $(MALLOC_$*),$(MALLOC_$*),$(MALLOC_DEFAULT))
+
+$(APP_OUT_DIR)/%.hrb : $(APP_OUT_DIR)/%/%.org
+	$(BIM2BIN) -osacmp in:$< out:$@
 
 # -- Kernel Build --
 $(OUT_DIR)/bootpack.bim : $(OBJS_BOOTPACK)
@@ -83,7 +112,7 @@ $(OUT_DIR)/hankaku.obj: $(OUT_DIR)/hankaku.bin
 	$(BIN2OBJ) $< $@ _hankaku
 
 # -- Boot Loader Build --
-$(OUT_DIR)/ipl10.bin: src/boot/ipl10.nas
+$(OUT_DIR)/ipl.bin: src/boot/ipl.nas
 	$(NASK) $< $@ $(subst .bin,.lst,$@)
 
 $(OUT_DIR)/asmhead.bin: src/boot/asmhead.nas
@@ -93,12 +122,12 @@ $(OUT_DIR)/asmhead.bin: src/boot/asmhead.nas
 $(IMG_DIR)/haribote.sys: $(OUT_DIR)/asmhead.bin $(OUT_DIR)/bootpack.hrb
 	cat $^ > $@
 
-$(IMG_DIR)/haribote.img: $(OUT_DIR)/ipl10.bin $(IMG_DIR)/haribote.sys $(APP_TARGETS)
+$(IMG_DIR)/haribote.img: $(OUT_DIR)/ipl.bin $(IMG_DIR)/haribote.sys $(APP_TARGETS)
 	$(EDIMG) imgin:$(TOOLPATH)/fdimg0at.tek \
-		wbinimg src:$(OUT_DIR)/ipl10.bin len:512 from:0 to:0 \
+		wbinimg src:$(OUT_DIR)/ipl.bin len:512 from:0 to:0 \
 		copy from:$(IMG_DIR)/haribote.sys to:@: \
 		$(foreach app, $(APP_TARGETS), copy from:$(app) to:@: ) \
-		copy from:src/boot/ipl10.nas to:@: \
+		copy from:fujisan.jpg to:@: \
 		imgout:$@
 
 iso : $(IMG_DIR)/haribote.img
@@ -106,5 +135,6 @@ iso : $(IMG_DIR)/haribote.img
 
 run: $(IMG_DIR)/haribote.img
 	$(QEMU) -m 128M -drive format=raw,if=floppy,file=$(IMG_DIR)/haribote.img -no-reboot -d int
+
 clean :
 	rm -rf $(OUT_DIR) $(IMG_DIR)

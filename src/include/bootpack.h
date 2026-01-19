@@ -113,19 +113,18 @@ void set_gatedesc(struct GATE_DESCRIPTOR *gd, int offset, int selector, int ar);
 
 // int.c
 void init_pic(void);
-void inthandler27(int *esp);
-#define PIC0_ICW1    0x0020
-#define PIC0_OCW2    0x0020
-#define PIC0_IMR     0x0021
-#define PIC0_ICW2    0x0021
-#define PIC0_ICW3    0x0021
-#define PIC0_ICW4    0x0021
-#define PIC1_ICW1    0x00a0
-#define PIC1_OCW2    0x00a0
-#define PIC1_IMR     0x00a1
-#define PIC1_ICW2    0x00a1
-#define PIC1_ICW3    0x00a1
-#define PIC1_ICW4    0x00a1
+#define PIC0_ICW1		0x0020
+#define PIC0_OCW2		0x0020
+#define PIC0_IMR		0x0021
+#define PIC0_ICW2		0x0021
+#define PIC0_ICW3		0x0021
+#define PIC0_ICW4		0x0021
+#define PIC1_ICW1		0x00a0
+#define PIC1_OCW2		0x00a0
+#define PIC1_IMR		0x00a1
+#define PIC1_ICW2		0x00a1
+#define PIC1_ICW3		0x00a1
+#define PIC1_ICW4		0x00a1
 
 // keyboard.c
 void inthandler21(int *esp);
@@ -192,7 +191,6 @@ void sheet_free(struct SHEET *sht);
 
 // timer.c
 #define MAX_TIMER    500
-
 struct TIMER {
     struct TIMER *next;
     unsigned int timeout;
@@ -227,12 +225,6 @@ struct TSS32 {              // Task State Segment
 	int eip, eflags, eax, ecx, edx, ebx, esp, ebp, esi, edi;
 	int es, cs, ss, ds, fs, gs;
 	int ldtr, iomap;
-};
-
-struct FILEHANDLE {
-    char *buf;
-    int size;
-    int pos;
 };
 
 struct TASK {
@@ -282,6 +274,11 @@ struct CONSOLE {
     int cur_x, cur_y, cur_c;
     struct TIMER *timer;
 };
+struct FILEHANDLE {
+    char *buf;
+    int size;
+    int pos;
+};
 void console_task(struct SHEET *sht, int memtotal);
 void cons_putchar(struct CONSOLE *cons, int chr, char move);
 void cons_putstr0 (struct CONSOLE *cons, char *s);
@@ -291,7 +288,10 @@ void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, int memtotal);
 void cmd_mem(struct CONSOLE *cons, int memtotal);
 void cmd_cls(struct CONSOLE *cons);
 void cmd_dir(struct CONSOLE *cons);
-void cmd_type(struct CONSOLE *cons, int *fat, char *cmdline);
+void cmd_exit(struct CONSOLE *cons, int *fat);
+void cmd_start(struct CONSOLE *cons, char *cmdline, int memtotal);
+void cmd_ncst(struct CONSOLE *cons, char *cmdline, int memtotal);
+void hrb_api_linewin(struct SHEET *sht, int x0, int y0, int x1, int y1, int col);
 int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline);
 int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax);
 int *inthandler0c(int *esp);
@@ -307,3 +307,13 @@ struct FILEINFO {
 void file_readfat(int *fat, unsigned char *img);
 void file_loadfile(int clustno, int size, char *buf, int *fat, char *img);
 struct FILEINFO *file_search(char *name, struct FILEINFO *finfo, int max);
+char *file_loadfile2(int clustno, int *psize, int *fat);
+
+// tek.c
+int tek_getsize(unsigned char *p);
+int tek_decomp(unsigned char *p, char *q, int size);
+
+// bootpack.c
+struct TASK *open_constask(struct SHEET *sht, unsigned int memtotal);
+struct SHEET *open_console(struct SHTCTL *shtctl, unsigned int memtotal);
+
