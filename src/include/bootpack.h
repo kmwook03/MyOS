@@ -238,6 +238,8 @@ struct TASK {
     struct FILEHANDLE *fhandle;         // file handle
     int *fat;                           // file allocation table
     char *cmdline;                      // command line
+    char langmode;                      // language mode (0: English, 1: Korean)
+
 };
 
 struct TASKLEVEL {
@@ -317,3 +319,7 @@ int tek_decomp(unsigned char *p, char *q, int size);
 struct TASK *open_constask(struct SHEET *sht, unsigned int memtotal);
 struct SHEET *open_console(struct SHTCTL *shtctl, unsigned int memtotal);
 
+// hangul.c
+void put_johab(char *vram, int xsize, int x, int y, char color, unsigned char *font, unsigned short code);
+unsigned short utf8_to_johab(unsigned char *s);
+void putstr_utf8(unsigned char *vram, int xsize, int x, int y, char color, unsigned char *s);

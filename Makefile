@@ -5,6 +5,8 @@ OUT_DIR = out
 APP_OUT_DIR = out/app
 IMG_DIR = img
 
+KOREAN_FONT = src/graphics/font/H04.FNT
+
 # -- Tools --
 NASK = $(TOOLPATH)/nask
 CC1 = $(TOOLPATH)/gocc1 -I$(INCPATH) -Os -Wall -quiet
@@ -39,7 +41,8 @@ APP_TARGETS = $(patsubst app/src/%.c, $(APP_OUT_DIR)/%.hrb, $(APP_SRC_C))
 # -- Kernel Objects --
 OBJS_BOOTPACK = $(OUT_DIR)/bootpack.obj $(OUT_DIR)/naskfunc.obj $(OUT_DIR)/hankaku.obj $(OUT_DIR)/graphic.obj $(OUT_DIR)/dsctbl.obj \
 				$(OUT_DIR)/int.obj $(OUT_DIR)/fifo.obj $(OUT_DIR)/keyboard.obj $(OUT_DIR)/mouse.obj $(OUT_DIR)/memory.obj $(OUT_DIR)/sheet.obj \
-				$(OUT_DIR)/timer.obj $(OUT_DIR)/mtask.obj $(OUT_DIR)/window.obj $(OUT_DIR)/console.obj $(OUT_DIR)/file.obj $(OUT_DIR)/tek.obj
+				$(OUT_DIR)/timer.obj $(OUT_DIR)/mtask.obj $(OUT_DIR)/window.obj $(OUT_DIR)/console.obj $(OUT_DIR)/file.obj $(OUT_DIR)/tek.obj \
+				$(OUT_DIR)/hangul.obj
 
 
 # -- Build Rule --
@@ -122,10 +125,11 @@ $(OUT_DIR)/asmhead.bin: src/boot/asmhead.nas
 $(IMG_DIR)/haribote.sys: $(OUT_DIR)/asmhead.bin $(OUT_DIR)/bootpack.hrb
 	cat $^ > $@
 
-$(IMG_DIR)/haribote.img: $(OUT_DIR)/ipl.bin $(IMG_DIR)/haribote.sys $(APP_TARGETS)
+$(IMG_DIR)/haribote.img: $(OUT_DIR)/ipl.bin $(IMG_DIR)/haribote.sys $(APP_TARGETS) $(KOREAN_FONT)
 	$(EDIMG) imgin:$(TOOLPATH)/fdimg0at.tek \
 		wbinimg src:$(OUT_DIR)/ipl.bin len:512 from:0 to:0 \
 		copy from:$(IMG_DIR)/haribote.sys to:@: \
+		copy from:$(KOREAN_FONT) to:@: \
 		$(foreach app, $(APP_TARGETS), copy from:$(app) to:@: ) \
 		copy from:fujisan.jpg to:@: \
 		imgout:$@
