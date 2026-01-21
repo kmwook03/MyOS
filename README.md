@@ -1,10 +1,17 @@
 ## OS 구조와 원리: OS 개발 30일 프로젝트
 
+![OS_Image](image.png)
+
 ### 프로젝트 개요
 
 > 본 프로젝트는 카와이 히데미(川合秀実)의 저서 **「OS 구조와 원리」** 를 기반으로 시스템 프로그래밍 및 운영체제 내부 동작 원리에 대한 이해를 목표로 진행한 OS 개발 실습 프로젝트입니다.
 >
 > 부산대학교 정보컴퓨터공학부 **프로그래밍언어 연구실** 우균 교수님과 김영훈 연구원님의 지도 하에 진행되었으며, Bare-metal 환경에서 실제로 부팅 가능한 간단한 운영체제를 직접 구현하였습니다.
+
+### 기술적 도전 : 한글 입출력 시스템
+
+기존 교재에서는 자세히 다루지 않는 한글 입출력 시스템(오토마타)을 독자적으로 설계 및 구현하여
+영문뿐만 아니라 한글 조합 및 출력이 가능합니다.
 
 ### 구현 기능
 
@@ -14,6 +21,22 @@
 - **32-bit Mode Switching**
     - 16-bit Real Mode에서 32-bit Protected Mode로 전환
     - GDT(Global Descriptor Table) 구성 및 세그먼트 레지스터 설정
+- **Interrupt Handling**
+    - IDT(Interrupt Descriptor Table) 구성
+- **Memory Management**
+    - 32 비트 FIFO 버퍼를 통해 메모리 관리 및 태스크 간 통신 구현
+- **Mouse/Keyboard Control**
+    - PS/2 사양의 마우스와 키보드 인터럽트 처리 구현
+- **Multitasking**
+    - TSS를 사용한 멀티태스킹 구현
+- **API**
+    - 앱에서 사용 가능한 API 구현
+- **LDT**
+    - LDT(Local Descriptor Table)를 통한 메모리 보호 구현
+- **FILE API**
+    - 파일 열기/닫기/찾기/읽기 API 구현
+- **Korean I/O**
+    - 한글 오토마타를 통한 입출력 구현
 
 ### 기술 스택
 
@@ -35,10 +58,65 @@
 
 > **하드웨어 추상화 및 에뮬레이션**
 
-- Qemu
+- Qemu: qemu-system-i386
 - VMware
 
 ### 메모리 레이아웃
+
+```
+	+-------------------+
+    |     VRAM Area     |
+    |       (VBE)       |
+    +-------------------+
+            ...     
+    +-------------------+
+    |     Available     |
+    |     Memory        |
+    +-------------------+ <--- 0x00400000
+    |      Memory       |
+    |      Manager      |
+    +-------------------+ <--- 0x003c0000
+    |     Stack/Data    |
+    +-------------------+
+    |        BOOT       |
+    |        PACK       |
+    |      (kernel)     |
+    +-------------------+ <--- 0x00280000
+    |        GDT        |
+    |        Area       |
+    +-------------------+ <--- 0x00270000
+    |        IDT        |
+    |        Area       |
+    +-------------------+ <--- 0x0026f800
+    |       Empty       |	
+    +-------------------+
+    |       Disk        |
+    |       Image       |
+    +-------------------+ <--- 0x00100000
+    |     BIOS ROM      |
+    +-------------------+ <--- 0x000c0000
+    |     VRAM (VGA)    |
+    +-------------------+ <--- 0x000a0000
+    |   BIOS/Reserved   |
+    +-------------------+ <--- 0x0009f000
+    |      Available    |
+    |      Memory       |
+    +-------------------+ <--- 0x00001000
+    |       BOOT        |
+    |       INFO        |
+    +-------------------+ <--- 0x00000ff0
+    | Korean Font Addr  |
+    +-------------------+ <--- 0x00000fe8
+    |    SHTCTL Addr    |
+    +-------------------+ <--- 0x00000fe4
+    |       Stack       |
+    +-------------------+ <--- 0x00000500
+    |	Bios Data Area	|
+    |	    (BDA)       |
+    +-------------------+ <--- 0x00000400
+    |        IVT        |
+    +-------------------+ <--- 0x00000000
+```
 
 ### 트러블 슈팅
 
@@ -47,19 +125,46 @@
 ```
 .
 ├── Makefile
-├── img                      // 디스크 이미지 파일
-│   ├── haribote.sys
-│   └── haribote.img
-├── out                      // 빌드 과정에서 발생하는 파일
-├── src                      // 소스 코드
-│   ├── asm
-│   │   └── naskfunc.nas
-│   ├── boot
-│   │   ├── asmhead.nas
-│   │   └── ipl10.nas
+├── README.md
+├── app                         // 응용 프로그램
+│   ├── api                 
 │   ├── include
-│   └── kernel
-│       └── bootpack.c
-├── tool                     // 교재 빌드 툴셋(리눅스 버전)
-└── vm                       // vmware 가상머신
+│   │   └── apilib.h
+│   └── src
+├── img                         // 이미지 파일(.img, .iso) 저장
+├── out                         // 빌드 중간 결과물
+│   └── app
+│         └── api
+├── src                         
+│   ├── boot                    // 부트로더
+│   │   ├── asmhead.nas
+│   │   └── ipl.nas
+│   ├── graphics
+│   │   └── font                // 폰트 파일
+│   │       ├── H04.FNT
+│   │       ├── H04.bin
+│   │       ├── hankaku.bin
+│   │       ├── hankaku.obj
+│   │       └── hankaku.txt
+│   ├── include                 // 헤더파일
+│   │   └── bootpack.h         
+│   └── kernel                  // 커널 소스 코드
+│       ├── bootpack.c          
+│       ├── console.c           
+│       ├── dsctbl.c            
+│       ├── fifo.c              
+│       ├── file.c              
+│       ├── graphic.c           
+│       ├── hangul.c            
+│       ├── int.c               
+│       ├── keyboard.c          
+│       ├── memory.c            
+│       ├── mouse.c             
+│       ├── mtask.c             
+│       ├── naskfunc.nas        
+│       ├── sheet.c             
+│       ├── tek.c               
+│       ├── timer.c             
+│       └── window.c            
+└── tool
 ```

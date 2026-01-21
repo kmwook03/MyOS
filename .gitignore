@@ -18,3 +18,5 @@ out/
 *.iso
 graphics/
 Makefile.orig
+.jpg
+.txt
