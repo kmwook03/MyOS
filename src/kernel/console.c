@@ -17,7 +17,7 @@ void console_task(struct SHEET *sht, int memtotal)
     int i, *fat = (int *) memman_alloc_4k(memman, 4 * 2880);            // FAT 테이블용 메모리 할당
 	struct CONSOLE cons;                                                // 콘솔 구조체
     struct FILEHANDLE fhandle[8];                                       // 파일 핸들 구조체 배열
-    char cmdline[30];                                                   // 명령어 입력 버퍼
+    char cmdline[128];                                                  // 명령어 입력 버퍼
 
     // 콘솔 구조체 초기화
     cons.sht = sht;
@@ -80,14 +80,22 @@ void console_task(struct SHEET *sht, int memtotal)
                 cmd_exit(&cons, fat); // 콘솔 종료
             }
 			if (256 <= i && i <= 511) {
-				if (i == 8 + 256) {                         // backspace: 지우기
-					if (cons.cur_x > 16) {
-						cons_putchar(&cons, ' ', 0);        // 공백 문자로 커서 지우기
-						cons.cur_x -= 8;                    // 커서 위치 이동
-                        if (task->langmode == 1) {          // 한글 모드인 경우
-                            cons.cur_x -= 8;                // 커서 위치 한 칸 더 이동
-                        }
-					}
+				if (i == 8 + 256) {                                         // backspace: 지우기
+                    // 이 부분 있으면 묘한 버그가 생김.. 아무래도 입력 조합 전체를 버퍼에 담아서 관리해야하는가..
+                    // if (hangul_automata_delete(&cons, task) == 1) { 
+                    //     // 한글 오토마타가 처리함
+                    // } else {
+                        if (cons.cur_x > 16) {
+                            cons_putchar(&cons, ' ', 0);                    // 커서 지우기
+                            if (task->langmode == 1) {                      // 한글 모드인 경우
+						        cons.cur_x -= 16;                               
+                                boxfill8(cons.sht->buf, cons.sht->bxsize, COL8_000000, cons.cur_x, cons.cur_y, cons.cur_x + 15, cons.cur_y + 15);
+                                sheet_refresh(cons.sht, cons.cur_x, cons.cur_y, cons.cur_x + 16, cons.cur_y + 16);
+                            } else {                                        // 영어 모드인 경우
+                                cons.cur_x -= 8;
+                            }
+					    }
+                    // }
 				} else if (i == 10 + 256) {                     // enter: 줄바꿈
                     cons_putchar(&cons, ' ', 0);                // 커서 지우기
 					cmdline[cons.cur_x / 8 - 2] = 0;            // 명령어 라인 종료 문자
@@ -101,11 +109,11 @@ void console_task(struct SHEET *sht, int memtotal)
                     // 일반 문자 입출력
                     if (task->langmode == 1) {                  // 한글 모드
                         int key = i - 256;                      // 입력된 키 값 (ASCII 코드)
-                        if (cons.cur_x < 240) {
+                        if (cons.cur_x < 8 + CONSOLE_TBOX_WIDTH) {
                             hangul_automata(&cons, task, key);  // 한글 오토마타가 처리
                         }
                     } else {                                        // 영어 모드
-					    if (cons.cur_x < 240) {
+					    if (cons.cur_x < 8 + CONSOLE_TBOX_WIDTH) {
 						    cmdline[cons.cur_x / 8 - 2] = i - 256;  // 명령어 라인에 문자 저장
 						    cons_putchar(&cons, i - 256, 1);        // 문자 출력
 					    }
@@ -241,23 +249,23 @@ void cons_newline(struct CONSOLE *cons)
 {
 	int x, y;
     struct SHEET *sht = cons->sht;
-	if (cons->cur_y < 28 + 112) {
+	if (cons->cur_y < 28 + CONSOLE_TBOX_HEIGHT - 16) {
 		cons->cur_y += 16;
 	} else {
-        // scroll
+        // 스크롤
         if (sht != 0) {
-		    for (y=28; y<28+112; y++) {
-			    for (x=8; x<8+240; x++) {
+		    for (y=28; y<28+CONSOLE_TBOX_HEIGHT-16; y++) {
+			    for (x=8; x<8+CONSOLE_TBOX_WIDTH; x++) {
 				    sht->buf[x + y * sht->bxsize] = sht->buf[x + (y + 16) * sht->bxsize];
 			    }
 		    }
 		
-		    for (y=28+112; y<28+128; y++) {
-			    for (x=8; x<8+240; x++) {
+		    for (y=28+CONSOLE_TBOX_HEIGHT-16; y<28+CONSOLE_TBOX_HEIGHT; y++) {
+			    for (x=8; x<8+CONSOLE_TBOX_WIDTH; x++) {
 				    sht->buf[x + y * sht->bxsize] = COL8_000000;
 			    }
 		    }
-		    sheet_refresh(sht, 8, 28, 8 + 240, 28 + 128);
+		    sheet_refresh(sht, 8, 28, 8 + CONSOLE_TBOX_WIDTH, 28 + CONSOLE_TBOX_HEIGHT);
         }
     }
     cons->cur_x = 8;
@@ -316,12 +324,12 @@ void cmd_cls(struct CONSOLE *cons)
     // cls/clear command
     struct SHEET *sht = cons->sht;
     int x, y;
-    for (y=28; y<28+128; y++) {
-        for (x=8; x<8+240; x++) {
+    for (y=28; y<28+CONSOLE_TBOX_HEIGHT; y++) {
+        for (x=8; x<8+CONSOLE_TBOX_WIDTH; x++) {
             sht->buf[x + y * sht->bxsize] = COL8_000000;
         }
     }
-    sheet_refresh(sht, 8, 28, 8 + 240, 28 + 128);
+    sheet_refresh(sht, 8, 28, 8 + CONSOLE_TBOX_WIDTH, 28 + CONSOLE_TBOX_HEIGHT);
     cons->cur_y = 28;
     return;
 }

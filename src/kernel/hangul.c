@@ -354,6 +354,22 @@ int get_composite_jung(int jung1, int jung2)
     return -1; // 합성 불가
 }
 
+// 중성 분해 함수
+// 합성된 중성을 분해하여 원래의 중성 인덱스 반환
+// @param jung: 합성된 중성 인덱스
+// @return: 분해된 중성 인덱스 (첫 번째 중성 인덱스)
+int split_composite_jung(int complex_jung)
+{
+    // 'ㅗ'로 복귀
+    if (complex_jung == 9 || complex_jung == 10 || complex_jung == 11) return 8;
+    // 'ㅡ'로 복귀
+    if (complex_jung == 14 || complex_jung == 15 || complex_jung == 16) return 13;
+    // 'ㅡ'로 복귀
+    if (complex_jung == 19) return 18;
+
+    return -1; // 분해 불가
+}
+
 // 한글 오토마타 함수
 // @param cons: 콘솔 구조체 포인터
 // @param task: 현재 작업 구조체 포인터
@@ -484,4 +500,47 @@ void hangul_automata(struct CONSOLE *cons, struct TASK *task, int key)
             }
             break;
     }
+}
+
+// 백스페이스 처리용 함수
+// 현재 경우에 따라 지워도 커서가 뒤에 남는 버그가 있음..
+// @param cons: 콘솔 구조체 포인터
+// @param task: 현재 작업 구조체 포인터
+// @return: 처리 여부 (1: 처리됨, 0: 처리 안됨)
+int hangul_automata_delete(struct CONSOLE *cons, struct TASK *task)
+{
+    // 조합 중인 문자가 없으면 처리 안함 -> console_task에서 처리
+    if (task->hangul_state == 0) return 0; // 처리 안됨
+
+    int prev_jung; // 이전 중성 인덱스 저장용
+    
+    switch(task->hangul_state) {
+        case 1: // 초성 삭제
+            task->hangul_state = 0;
+            task->hangul_idx[0] = -1;
+            break;
+        case 2: // 중성 삭제
+            prev_jung = split_composite_jung(task->hangul_idx[1]);  // 중성 분해 시도
+            if (prev_jung != -1) {  // 분해 가능하면 이전 형태로 되돌림
+                task->hangul_idx[1] = prev_jung;
+            } else {    // 분해 불가능하면 삭제
+                task->hangul_state = 1;
+                task->hangul_idx[1] = -1;
+            }
+            break;
+        case 3: // 종성 삭제
+            task->hangul_state = 2;
+            task->hangul_idx[2] = -1;
+            break;
+    }
+
+    if (task->hangul_state == 0) {                                                  // 백스페이스 결과 조합 중인 문자가 없으면 지우기
+        draw_composing_char(cons, cons->cur_x - 16, cons->cur_y, -1, -1, -1);
+        cons_putchar(&cons, ' ', 0); // 공백 문자로 덮어쓰기
+        cons->cur_x -= 16;
+    } else {                                                                        // 여전히 조합 중인 문자가 있으면 다시 그리기
+        draw_composing_char(cons, cons->cur_x - 16, cons->cur_y, task->hangul_idx[0], task->hangul_idx[1], task->hangul_idx[2]);
+    }
+
+    return 1; // 처리됨
 }
