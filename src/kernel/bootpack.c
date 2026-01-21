@@ -143,23 +143,22 @@ void HariMain(void)
 	unsigned char *korean_font = (unsigned char *) *((int *) 0x0fe8);
 
 	// 테스트 1: "가" (조합형 코드 0x8861)
-	put_johab(binfo->vram, binfo->scrnx, 100, 100, COL8_FFFFFF, korean_font, 0x8861);
+	put_johab(sht_back, 100, 100, COL8_FFFFFF, korean_font, 0x8861);
 	// 테스트 2: "나" (조합형 코드 0x9061)
-	put_johab(binfo->vram, binfo->scrnx, 120, 100, COL8_FFFFFF, korean_font, 0x9061);
+	put_johab(sht_back, 120, 100, COL8_FFFFFF, korean_font, 0x9061);
 	// 테스트 3: "다" (조합형 코드 0x9461)
-	put_johab(binfo->vram, binfo->scrnx, 140, 100, COL8_FFFFFF, korean_font, 0x9461);
+	put_johab(sht_back, 140, 100, COL8_FFFFFF, korean_font, 0x9461);
 	// 테스트 4: "한" (조합형 코드 0xd065)
-	put_johab(binfo->vram, binfo->scrnx, 100, 120, COL8_FFFFFF, korean_font, 0xd065);
+	put_johab(sht_back, 100, 120, COL8_FFFFFF, korean_font, 0xd065);
 	// 테스트 5: "글" (조합형 코드 0x8b69)
-	put_johab(binfo->vram, binfo->scrnx, 120, 120, COL8_FFFFFF, korean_font, 0x8b69);
+	put_johab(sht_back, 120, 120, COL8_FFFFFF, korean_font, 0x8b69);
 	// 테스트 6: "좋" (조합형 코드 0xb9bd)
-	put_johab(binfo->vram, binfo->scrnx, 140, 120, COL8_FFFFFF, korean_font, 0xb9bd);
+	put_johab(sht_back, 140, 120, COL8_FFFFFF, korean_font, 0xb9bd);
 	// 테스트 7: "아" (조합형 코드 0xb461)
-	put_johab(binfo->vram, binfo->scrnx, 160, 120, COL8_FFFFFF, korean_font, 0xb461);
-
+	put_johab(sht_back, 160, 120, COL8_FFFFFF, korean_font, 0xb461);
 	char ks[40];
 	sprintf(ks, "한글 출력 성공!!");
-	putstr_utf8(binfo->vram, binfo->scrnx, 100, 140, COL8_FFFFFF, (unsigned char *) ks);
+	putstr_utf8(sht_back, 100, 140, COL8_FFFFFF, (unsigned char *) ks);
 
 	// 메인 루프
 	for (;;) {

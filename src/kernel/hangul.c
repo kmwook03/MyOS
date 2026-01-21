@@ -29,7 +29,14 @@ unsigned char Middle[3][22] = {
 // 4. 벌수와 음소별 인덱스를 이용해서 폰트로부터 문자의 데이터를 읽어온다.
 // 5. 초성, 중성, 종성별로 읽어 들인 폰트 데이터를 OR 연산을 이용해서 하나의 문자 이미지로 조합을 완성한다.
 // 6. 완성된 문자 이미지를 화면에 출력한다.
-void put_johab(char *vram, int xsize, int x, int y, char color, unsigned char *font, unsigned short code)
+// @param sht: 출력할 시트
+// @param x: 출력할 x 좌표
+// @param y: 출력할 y 좌표
+// @param color: 출력할 색상
+// @param *font: 한글 폰트 주소
+// @param code: 조합형 코드 (2바이트)
+// @return: void
+void put_johab(struct SHEET *sht, int x, int y, char color, unsigned char *font, unsigned short code)
 {
     // code: 2바이트 조합형 코드 (MSB(1) + 초성(5) + 중성(5) + 종성(5))
     // 조합형 코드 분해
@@ -86,7 +93,7 @@ void put_johab(char *vram, int xsize, int x, int y, char color, unsigned char *f
         
         // VRAM 주소 계산
         // 화면 메모리 주소: y좌표 * 화면 너비 + x좌표
-        unsigned char *p = vram + (y + i) * xsize + x;
+        unsigned char *p = sht->buf + (y + i) * sht->bxsize + x;
 
         // 픽셀 찍기
         for (b=0; b<8; b++) {
@@ -109,11 +116,90 @@ static unsigned char U2J_jung[21] = {
 };
 static unsigned char U2J_jong[28] = {
     0, // 0: 받침 없음
-    2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, // ㄱ(1)~ㅂ(17) -> 값 2~18
-    20, 21, 22, 23, 24, 25, 26, 27, 28, 29 // ㅄ(18)~ㅎ(27) -> 값 20~29 (19 건너뜀)
+    2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, // ㄱ(2)~ㅂ(19) -> 값 2~19 (18 빠짐)
+    20, 21, 22, 23, 24, 25, 26, 27, 28, 29 // ㅄ(18)~ㅎ(27) -> 값 20~29;
 };
 
+// 초성 매핑 테이블 (ASCII 코드 -> 유니코드 인덱스)
+// @param c: 입력된 키 값 (ASCII 코드)
+// @return: 초성 인덱스 (0~18), 없으면 -1
+int key2cho(char c) {
+    switch(c) {
+        case 'r': return 0;  // ㄱ
+        case 'R': return 1;  // ㄲ
+        case 's': return 2;  // ㄴ
+        case 'e': return 3;  // ㄷ
+        case 'E': return 4;  // ㄸ
+        case 'f': return 5;  // ㄹ
+        case 'a': return 6;  // ㅁ
+        case 'q': return 7;  // ㅂ
+        case 'Q': return 8;  // ㅃ
+        case 't': return 9;  // ㅅ
+        case 'T': return 10; // ㅆ
+        case 'd': return 11; // ㅇ
+        case 'w': return 12; // ㅈ
+        case 'W': return 13; // ㅉ
+        case 'c': return 14; // ㅊ
+        case 'z': return 15; // ㅋ
+        case 'x': return 16; // ㅌ
+        case 'v': return 17; // ㅍ
+        case 'g': return 18; // ㅎ
+    }
+    return -1;
+}
+
+// 중성 매핑 테이블 (ASCII 코드 -> 유니코드 인덱스)
+// @param c: 입력된 키 값 (ASCII 코드)
+// @return: 중성 인덱스 (0~20), 없으면 -1
+int key2jung(char c) {
+    switch(c) {
+        case 'k': return 0;  // ㅏ
+        case 'o': return 1;  // ㅐ
+        case 'i': return 2;  // ㅑ
+        case 'O': return 3;  // ㅒ
+        case 'j': return 4;  // ㅓ
+        case 'p': return 5;  // ㅔ
+        case 'u': return 6;  // ㅕ
+        case 'P': return 7;  // ㅖ
+        case 'h': return 8;  // ㅗ
+        case 'y': return 12; // ㅛ
+        case 'n': return 13; // ㅜ
+        case 'b': return 17; // ㅠ
+        case 'm': return 18; // ㅡ
+        case 'l': return 20; // ㅣ
+    }
+    return -1;
+}
+
+// 종성 매핑 테이블 (ASCII 코드 -> 유니코드 인덱스)
+// @param c: 입력된 키 값 (ASCII 코드)
+// @return: 종성 인덱스 (0~27), 없으면 -1
+int key2jong(char c) {
+    switch(c) {
+        case 'r': return 1;  // ㄱ
+        case 'R': return 2;  // ㄲ
+        case 's': return 4;  // ㄴ
+        case 'e': return 7;  // ㄷ
+        case 'f': return 8;  // ㄹ
+        case 'a': return 16; // ㅁ
+        case 'q': return 17; // ㅂ
+        case 't': return 19; // ㅅ
+        case 'T': return 20; // ㅆ
+        case 'd': return 21; // ㅇ
+        case 'w': return 22; // ㅈ
+        case 'c': return 23; // ㅊ
+        case 'z': return 24; // ㅋ
+        case 'x': return 25; // ㅌ
+        case 'v': return 26; // ㅍ
+        case 'g': return 27; // ㅎ
+    }
+    return -1; // 종성 없음
+}
+
 // 유니코드(UTF-8) -> 조합형 코드 변환
+// 단지 개발 편의를 위한 함수.. sprintf(s, "한글한글"); 등을 가능하게 하기 위함.
+// @param s: UTF-8 인코딩된 문자열 포인터 (3바이트 필요)
+// @return: 조합형 코드 (2바이트, 최상위 비트 1), 한글이 아니면 0 반환
 unsigned short utf8_to_johab(unsigned char *s)
 {
     // UTF-8 포맷: 1110xxxx 10xxxxxx 10xxxxxx
@@ -142,7 +228,15 @@ unsigned short utf8_to_johab(unsigned char *s)
     return johab;
 }
 
-void putstr_utf8(unsigned char *vram, int xsize, int x, int y, char color, unsigned char *s)
+// 유니코드 -> johab 변환 후 한글 출력 함수
+// 단지 개발 편의를 위한 함수.. sprintf(s, "한글한글"); 등을 가능하게 하기 위함.
+// @param sht: 출력할 시트
+// @param x: 출력할 x 좌표
+// @param y: 출력할 y 좌표
+// @param color: 출력할 색상
+// @param s: 출력할 문자열 (UTF-8 인코딩)
+// @return: void
+void putstr_utf8(struct SHEET *sht, int x, int y, char color, unsigned char *s)
 {
     unsigned char *korean = (unsigned char *) *((int *) 0x0fe8); // 한글 폰트 주소
     char s_temp[2] = {0, 0}; // 문자 하나만 담는 임시 버퍼
@@ -151,7 +245,7 @@ void putstr_utf8(unsigned char *vram, int xsize, int x, int y, char color, unsig
             // 1바이트 ASCII 문자
             s_temp[0] = *s;
             s_temp[1] = 0x00;
-            putfonts8_asc(vram, xsize, x, y, color, s_temp);
+            putfonts8_asc(sht->buf, sht->bxsize, x, y, color, s_temp);
             x += 8;
             s++;
         } else if ((*s & 0xE0) == 0xE0) {
@@ -161,7 +255,7 @@ void putstr_utf8(unsigned char *vram, int xsize, int x, int y, char color, unsig
 
             unsigned short johab = utf8_to_johab(s);
             if (johab != 0) {
-                put_johab(vram, xsize, x, y, color, korean, johab);
+                put_johab(sht, x, y, color, korean, johab);
             }
             x += 16;
             s += 3; // 3바이트 문자이므로 포인터 3 증가
@@ -169,77 +263,16 @@ void putstr_utf8(unsigned char *vram, int xsize, int x, int y, char color, unsig
             s++;
         }
     }
+    sheet_refresh(sht, sht->vx0, sht->vy0, x, y + 16);
+    return;
 }
 
-// 한글 오토마타
+// 한글 오토마타 구현부
 
-// 키 매핑 테이블
-int key2cho(char c) {
-    switch(c) {
-case 'r': return 0;  // ㄱ
-        case 'R': return 1;  // ㄲ
-        case 's': return 2;  // ㄴ
-        case 'e': return 3;  // ㄷ
-        case 'E': return 4;  // ㄸ
-        case 'f': return 5;  // ㄹ
-        case 'a': return 6;  // ㅁ
-        case 'q': return 7;  // ㅂ
-        case 'Q': return 8;  // ㅃ
-        case 't': return 9;  // ㅅ
-        case 'T': return 10; // ㅆ
-        case 'd': return 11; // ㅇ
-        case 'w': return 12; // ㅈ
-        case 'W': return 13; // ㅉ
-        case 'c': return 14; // ㅊ
-        case 'z': return 15; // ㅋ
-        case 'x': return 16; // ㅌ
-        case 'v': return 17; // ㅍ
-        case 'g': return 18; // ㅎ
-    }
-    return -1;
-}
-
-int key2jung(char c) {
-    switch(c) {
-case 'k': return 0;  // ㅏ
-        case 'o': return 1;  // ㅐ
-        case 'i': return 2;  // ㅑ
-        case 'O': return 3;  // ㅒ
-        case 'j': return 4;  // ㅓ
-        case 'p': return 5;  // ㅔ
-        case 'u': return 6;  // ㅕ
-        case 'P': return 7;  // ㅖ
-        case 'h': return 8;  // ㅗ
-        case 'y': return 13; // ㅜ
-        case 'n': return 17; // ㅠ
-        case 'm': return 18; // ㅡ
-        case 'l': return 20; // ㅣ
-    }
-    return -1;
-}
-
-int key2jong(char c) {
-switch(c) {
-        case 'r': return 1;  // ㄱ
-        case 'R': return 2;  // ㄲ
-        case 's': return 4;  // ㄴ
-        case 'e': return 7;  // ㄷ
-        case 'f': return 8;  // ㄹ
-        case 'a': return 16; // ㅁ
-        case 'q': return 17; // ㅂ
-        case 't': return 19; // ㅅ
-        case 'T': return 20; // ㅆ
-        case 'd': return 21; // ㅇ
-        case 'w': return 22; // ㅈ
-        case 'c': return 23; // ㅊ
-        case 'z': return 24; // ㅋ
-        case 'x': return 25; // ㅌ
-        case 'v': return 26; // ㅍ
-        case 'g': return 27; // ㅎ
-    }
-    return 0; // 종성 없음
-}
-
+// 유니코드 값을 UTF-8로 변환하여 dest에 저장
+// @param val: 유니코드 값
+// @param dest: 변환된 UTF-8 문자열을 저장할 버퍼 (최대 4바이트 필요)
+// @return: void
 void unicode_to_utf8(unsigned short val, char *dest)
 {
     if (val < 0x80) {
@@ -261,102 +294,152 @@ void unicode_to_utf8(unsigned short val, char *dest)
     return;
 }
 
+// 종성 인덱스를 초성 인덱스로 변환하는 테이블
 static int jong2cho[] = {
     -1, 0, 1, -1, 2, -1, -1, 3, 5, -1, -1, -1, -1, -1, -1, -1, 
     6, 7, -1, 9, 10, 11, 12, 14, 15, 16, 17, 18
 };
 
+// 조합 중인 글자 그리기 함수
+// @param cons: 콘솔 구조체 포인터
+// @param x: 출력할 x 좌표
+// @param y: 출력할 y 좌표
+// @param cho: 초성 인덱스
+// @param jung: 중성 인덱스
+// @param jong: 종성 인덱스
+// @return: void
+void draw_composing_char(struct CONSOLE *cons, int x, int y, int cho, int jung, int jong)
+{
+    unsigned char *korean = (unsigned char *) *((int *) 0x0fe8); // 한글 폰트 주소
+    unsigned short johab = 0x8000; // 최상위 비트 1 설정
+    
+    if (cho != -1)johab |= (U2J_cho[cho] & 0x1F) << 10; // 초성
+    if (jung != -1) johab |= (U2J_jung[jung] & 0x1F) << 5; // 중성
+    if (jong != -1) johab |= (U2J_jong[jong] & 0x1F); // 종성
+
+    boxfill8(cons->sht->buf, cons->sht->bxsize, COL8_000000, x, y, x+15, y+15); // 배경 지우기
+    put_johab(cons->sht, x, y, COL8_FFFFFF, korean, johab);
+    sheet_refresh(cons->sht, x, y, x+16, y+16);
+    return;
+}
+
+// 한글 오토마타 함수
+// @param cons: 콘솔 구조체 포인터
+// @param task: 현재 작업 구조체 포인터
+// @param key: 입력된 키 값 (ASCII 코드)
+// @return: void
 void hangul_automata(struct CONSOLE *cons, struct TASK *task, int key)
 {
-    char s[4];
+    char s[2];
     int idx_cho, idx_jung, idx_jong;
-    int code;
 
-    idx_cho = key2cho(key);
-    idx_jung = key2jung(key);
-    idx_jong = key2jong(key);
+    idx_cho = key2cho(key);     // 초성 인덱스
+    idx_jung = key2jung(key);   // 중성 인덱스
+    idx_jong = key2jong(key);   // 종성 인덱스
 
+    // 상태 전이
     switch(task->hangul_state) {
+        // state 0: 아무 것도 입력되지 않은 상태
         case 0:
-            if (idx_cho != -1) {
-                task->hangul_state = 1;
-                task->hangul_idx[0] = idx_cho;
-                task->hangul_idx[1] = -1;
-                task->hangul_idx[2] = -1;
-            } else if (idx_jung != -1) {
-                // 모음 단독 입력
-            } else {
-                // 한글 아님
+            if (idx_cho != -1) { // 초성이 입력 되어있다면?
+                // 초성 입력 -> 조합 시작
+                task->hangul_state = 1;         // 상태 1로 전이
+                task->hangul_idx[0] = idx_cho;  // 초성 인덱스 저장
+                task->hangul_idx[1] = -1;       // 중성 인덱스 초기화 (아직 입력 안됨)
+                task->hangul_idx[2] = -1;       // 종성 인덱스 초기화 (아직 입력 안됨)
+                draw_composing_char(cons, cons->cur_x, cons->cur_y, idx_cho, -1, -1);
+                cons->cur_x += 16; // 커서 전진
+            } else if (idx_jung != -1) { // 초성은 없는데 중성이 입력되었다면?
+                // 모음 단독 입력 -> 바로 출력
                 s[0] = key;
                 s[1] = 0;
-            }
-            break;
-        case 1:
-            if (idx_jung != -1) {
-                task->hangul_state = 2;
-                task->hangul_idx[1] = idx_jung;
-
-                code = 0xac00 + (task->hangul_idx[0] * 588) + (task->hangul_idx[1] * 28);
-                unicode_to_utf8(code, s);
                 cons_putstr0(cons, s);
-                cons->cur_x -= 16; // 커서 뒤로
-            } else if (idx_cho != -1) {
-                task->hangul_idx[0] = idx_cho;
+            } else {
+                // 한글 아님 -> 바로 출력
+                s[0] = key;
+                s[1] = 0;
+                cons_putstr0(cons, s);
             }
             break;
+
+        // state 1: 초성만 입력된 상태
+        case 1:
+            if (idx_jung != -1) { // 중성이 입력되었다면?
+                // 중성 입력 -> 다음 상태로 전이
+                task->hangul_state = 2;             // 상태 2로 전이
+                task->hangul_idx[1] = idx_jung;     // 중성 인덱스 저장
+                task->hangul_idx[2] = -1;           // 종성 인덱스 초기화 (아직 입력 안됨)
+                draw_composing_char(cons, cons->cur_x - 16, cons->cur_y, task->hangul_idx[0], idx_jung, -1); // 조합 중인 글자 그리기
+            } else if (idx_cho != -1) { // 또 다른 초성이 입력되었다면?
+                // 초성 입력 -> 앞 글자 확정 후 새 글자 시작
+                task->hangul_state = 1;             // 상태 1로 유지
+                task->hangul_idx[0] = idx_cho;      // 새로운 초성 인덱스 저장
+                task->hangul_idx[1] = -1;           // 중성 인덱스 초기화 (아직 입력 안됨)
+                task->hangul_idx[2] = -1;           // 종성 인덱스 초기화 (아직 입력 안됨)
+
+                draw_composing_char(cons, cons->cur_x, cons->cur_y, idx_cho, -1, -1);
+                cons->cur_x += 16; // 커서 전진
+            } else {
+                // 한글 아님 -> 앞 글자 확정 후 새 글자 시작
+                task->hangul_state = 0;
+                s[0] = key;
+                s[1] = 0;
+                cons_putstr0(cons, s);
+            }
+            break;
+
+        // state 2: 초성+중성 입력된 상태
         case 2:
             if (idx_jong != -1) {
-                task->hangul_idx[2] = idx_jong;
-                cons_putchar(cons, ' ', 0); 
-                cons->cur_x -= 8; // 커서 뒤로
-                code = 0xac00 + (task->hangul_idx[0] * 588) + (task->hangul_idx[1] * 28) + task->hangul_idx[2];
-
-                unicode_to_utf8(code, s);
-                cons_putstr0(cons, s);
-                cons->cur_x -= 16; // 커서 뒤로
+                // 종성 입력 -> 글자 완성 + 다음 상태로 전이
                 task->hangul_state = 3;
+                task->hangul_idx[2] = idx_jong;
+                draw_composing_char(cons, cons->cur_x - 16, cons->cur_y, task->hangul_idx[0], task->hangul_idx[1], idx_jong);
             } else if (idx_jung != -1) {
-                cons->cur_x += 16;
+                // 모음 입력 -> 앞 글자 확정 후 새 글자 시작
                 task->hangul_state = 0;
                 hangul_automata(cons, task, key);
+            } else {
+                // 한글 아님 -> 앞 글자 확정 후 새 글자 시작
+                task->hangul_state = 0;
+                s[0] = key;
+                s[1] = 0;
+                cons_putstr0(cons, s);
             }
             break;
+        // state 3: 초성+중성+종성 입력된 상태
         case 3:
             if (idx_jung != -1) {
-                code = 0xac00 + (task->hangul_idx[0] * 588) + (task->hangul_idx[1] * 28);
-                cons_putchar(cons, ' ', 0);
-                cons->cur_x -= 8; // 커서 뒤로
+                // 종성 분리 (예: 각ㅏ -> 가가)
+                int prev_cho = task->hangul_idx[0];
+                int prev_jung = task->hangul_idx[1];
+                int prev_jong = task->hangul_idx[2];
 
-                unicode_to_utf8(code, s);
-                cons_putstr0(cons, s);
+                draw_composing_char(cons, cons->cur_x - 16, cons->cur_y, prev_cho, prev_jung, -1); // 앞 글자 다시 그리기
 
-                int next_cho = jong2cho[task->hangul_idx[2]];
+                int next_cho = jong2cho[prev_jong]; // 종성->초성 변환
                 if (next_cho != -1) {
+                    task->hangul_state = 2;
                     task->hangul_idx[0] = next_cho;
                     task->hangul_idx[1] = idx_jung;
                     task->hangul_idx[2] = -1;
-
-                    code = 0xac00 + (task->hangul_idx[0] * 588) + (task->hangul_idx[1] * 28);
-                    unicode_to_utf8(code, s);
-                    cons_putstr0(cons, s);
-                    cons->cur_x -= 16; // 커서 뒤로
-
-                    task->hangul_state = 2;
+                    draw_composing_char(cons, cons->cur_x, cons->cur_y, next_cho, idx_jung, -1);
+                    cons->cur_x += 16; // 커서 전진
                 } else {
                     task->hangul_state = 0;
                     hangul_automata(cons, task, key);
                 }
             } else if (idx_cho != -1) {
-                cons->cur_x += 16;
-
+                // 자음 입력 -> 앞 글자 확정 후 새 글자 시작
                 task->hangul_state = 1;
                 task->hangul_idx[0] = idx_cho;
                 task->hangul_idx[1] = -1;
                 task->hangul_idx[2] = -1;
+                draw_composing_char(cons, cons->cur_x, cons->cur_y, idx_cho, -1, -1);
+                cons->cur_x += 16; // 커서 전진
             } else {
-                cons->cur_x += 16;
+                // 한글 아님 -> 앞 글자 확정 후 새 글자 시작
                 task->hangul_state = 0;
-
                 s[0] = key;
                 s[1] = 0;
                 cons_putstr0(cons, s);

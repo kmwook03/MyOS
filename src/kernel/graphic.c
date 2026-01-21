@@ -55,6 +55,15 @@ void set_palette(int start, int end, unsigned char *rgb)
     return;
 }
 
+// vram의 (x0, y0) 부터 (x1, y1) 까지의 사각형을 색갈 c로 채움
+// @param vram: 비디오 메모리 주소
+// @param xsize: 화면 가로 크기
+// @param c: 채울 색상
+// @param x0: 시작 x 좌표
+// @param y0: 시작 y 좌표
+// @param x1: 끝 x 좌표
+// @param y1: 끝 y 좌표
+// @return: void
 void boxfill8(unsigned char *vram, int xsize, unsigned char c, int x0, int y0, int x1, int y1)
 {
     int x, y;
@@ -66,6 +75,11 @@ void boxfill8(unsigned char *vram, int xsize, unsigned char c, int x0, int y0, i
     return;
 }
 
+// 화면 초기화 함수
+// @param vram: 비디오 메모리 주소
+// @param x: 화면 가로 크기
+// @param y: 화면 세로 크기
+// @return: void
 void init_screen8(char *vram, int x, int y)
 {
     boxfill8(vram, x, COL8_008484, 0,      0,      x - 1, y - 29);
@@ -87,6 +101,14 @@ void init_screen8(char *vram, int x, int y)
     return;
 }
 
+// 8x16 크기의 폰트 데이터를 비디오 메모리에 출력
+// @param vram: 비디오 메모리 주소
+// @param xsize: 화면 가로 크기
+// @param x: 출력할 x 좌표
+// @param y: 출력할 y 좌표
+// @param c: 출력할 색상
+// @param font: 폰트 데이터 주소
+// @return: void
 void putfont8(char *vram, int xsize, int x, int y, char c, char *font)
 {
     int i;
@@ -106,6 +128,14 @@ void putfont8(char *vram, int xsize, int x, int y, char c, char *font)
     return;
 }
 
+// 영문 문자열을 비디오 메모리에 출력
+// @param vram: 비디오 메모리 주소
+// @param xsize: 화면 가로 크기
+// @param x: 출력할 x 좌표
+// @param y: 출력할 y 좌표
+// @param c: 출력할 색상
+// @param *s: 출력할 문자열
+// @return: void
 void putfonts8_asc(char *vram, int xsize, int x, int y, char c, unsigned char *s)
 {
     extern char hankaku[4096];
@@ -116,6 +146,10 @@ void putfonts8_asc(char *vram, int xsize, int x, int y, char c, unsigned char *s
     return;
 }
 
+// 마우스 커서 초기화
+// @param mouse: 마우스 커서 버퍼 주소
+// @param bc: 배경 색상
+// @return: void
 void init_mouse_cursor8(char *mouse, char bc)
 {
     static char cursor[16][16] = {
@@ -154,6 +188,16 @@ void init_mouse_cursor8(char *mouse, char bc)
     return;
 }
 
+// 화면에 버퍼를 복사하는 함수
+// @param vram: 비디오 메모리 주소
+// @param vxsize: 화면 가로 크기
+// @param pxsize: 복사할 버퍼의 가로 크기
+// @param pysize: 복사할 버퍼의 세로 크기
+// @param px0: 복사할 버퍼의 시작 x 좌표
+// @param py0: 복사할 버퍼의 시작 y 좌표
+// @param *buf: 복사할 버퍼 주소
+// @param bxsize: 복사할 버퍼의 가로 크기
+// @return: void
 void putblock8_8(char *vram, int vxsize, int pxsize,
                  int pysize, int px0, int py0, char *buf, int bxsize)
 {
