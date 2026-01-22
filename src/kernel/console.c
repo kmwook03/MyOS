@@ -4,12 +4,17 @@
 #include <stdio.h>
 #include <string.h>
 
-// 콘솔 태스크 함수
-// 키보드 입력 및 명령어 처리 담당
-// 콘솔 시트 업데이트 및 커서 제어 포함
-// @param sht: 콘솔 시트 포인터
-// @param memtotal: 총 메모리 크기
-// @return: void
+/** 
+ * @brief 콘솔 태스크 함수
+ * 
+ * 키보드 입력 및 명령어 처리 담당
+ *
+ *  콘솔 시트 업데이트 및 커서 제어 포함
+ * 
+ * @param sht: 콘솔 시트 포인터
+ * @param memtotal: 총 메모리 크기
+ * @return: void
+ */
 void console_task(struct SHEET *sht, int memtotal)
 {
     struct TASK *task = task_now();                                     // 현재 태스크 포인터 얻기
@@ -81,21 +86,20 @@ void console_task(struct SHEET *sht, int memtotal)
             }
 			if (256 <= i && i <= 511) {
 				if (i == 8 + 256) {                                         // backspace: 지우기
-                    // 이 부분 있으면 묘한 버그가 생김.. 아무래도 입력 조합 전체를 버퍼에 담아서 관리해야하는가..
-                    // if (hangul_automata_delete(&cons, task) == 1) { 
-                    //     // 한글 오토마타가 처리함
-                    // } else {
-                        if (cons.cur_x > 16) {
-                            cons_putchar(&cons, ' ', 0);                    // 커서 지우기
-                            if (task->langmode == 1) {                      // 한글 모드인 경우
-						        cons.cur_x -= 16;                               
-                                boxfill8(cons.sht->buf, cons.sht->bxsize, COL8_000000, cons.cur_x, cons.cur_y, cons.cur_x + 15, cons.cur_y + 15);
-                                sheet_refresh(cons.sht, cons.cur_x, cons.cur_y, cons.cur_x + 16, cons.cur_y + 16);
-                            } else {                                        // 영어 모드인 경우
-                                cons.cur_x -= 8;
-                            }
-					    }
-                    // }
+                    if (hangul_automata_delete(&cons, task) == 1) { 
+                        // 한글 오토마타가 처리함
+                        continue;
+                    }
+                    if (cons.cur_x > 16) {
+                        cons_putchar(&cons, ' ', 0);                    // 커서 지우기
+                        if (task->langmode == 1) {                      // 한글 모드인 경우
+					        cons.cur_x -= 16;                               
+                            boxfill8(cons.sht->buf, cons.sht->bxsize, COL8_000000, cons.cur_x, cons.cur_y, cons.cur_x + 15, cons.cur_y + 15);
+                            sheet_refresh(cons.sht, cons.cur_x, cons.cur_y, cons.cur_x + 16, cons.cur_y + 16);
+                        } else {                                        // 영어 모드인 경우
+                            cons.cur_x -= 8;
+                        }
+					}
 				} else if (i == 10 + 256) {                     // enter: 줄바꿈
                     cons_putchar(&cons, ' ', 0);                // 커서 지우기
 					cmdline[cons.cur_x / 8 - 2] = 0;            // 명령어 라인 종료 문자
@@ -132,11 +136,14 @@ void console_task(struct SHEET *sht, int memtotal)
     }
 }
 
-// 콘솔에 문자 출력
-// @param cons: 콘솔 구조체 포인터
-// @param chr: 출력할 문자
-// @param move: 커서 이동 여부 (0: 이동 안함, 1: 이동함)
-// @return: void
+/**
+ * @brief 콘솔에 문자 출력
+ * 
+ * @param cons: 콘솔 구조체 포인터
+ * @param chr: 출력할 문자
+ * @param move: 커서 이동 여부 (0: 이동 안함, 1: 이동함)
+ * @return: void
+ */
 void cons_putchar(struct CONSOLE *cons, int chr, char move)
 {
     char s[2];
@@ -173,10 +180,13 @@ void cons_putchar(struct CONSOLE *cons, int chr, char move)
     return;
 }
 
-// 콘솔에 문자열 포인터 사용하여 출력
-// @param cons: 콘솔 구조체 포인터
-// @param s: 출력할 문자열 포인터
-// @return: void
+/** 
+ * @brief 콘솔에 문자열 포인터 사용하여 출력
+ *
+ * @param cons: 콘솔 구조체 포인터
+ * @param s: 출력할 문자열 포인터
+ * @return: void
+*/
 void cons_putstr0 (struct CONSOLE *cons, char *s)
 {
     unsigned char *korean = (unsigned char *) *((int *) 0x0fe8);
@@ -207,11 +217,14 @@ void cons_putstr0 (struct CONSOLE *cons, char *s)
     return;
 }
 
-// 콘솔에 문자열 포인터와 길이 사용하여 출력
-// @param cons: 콘솔 구조체 포인터
-// @param s: 출력할 문자열 포인터
-// @param l: 출력할 문자열 길이
-// @return: void
+/**
+ * @brief 콘솔에 문자열 포인터와 길이 사용하여 출력
+ *
+ *  @param cons: 콘솔 구조체 포인터
+ * @param s: 출력할 문자열 포인터
+ * @param l: 출력할 문자열 길이
+ * @return: void
+ */
 void cons_putstr1(struct CONSOLE *cons, char *s, int l)
 {
     unsigned char *korean = (unsigned char *) *((int *) 0x0fe8);
@@ -242,9 +255,12 @@ void cons_putstr1(struct CONSOLE *cons, char *s, int l)
     return;
 }
 
-// 콘솔 줄바꿈 처리 함수
-// @param cons: 콘솔 구조체 포인터
-// @return: void
+/**
+ * @brief 콘솔 줄바꿈 처리 함수
+ * 
+ * @param cons: 콘솔 구조체 포인터
+ * @return: void
+ */
 void cons_newline(struct CONSOLE *cons)
 {
 	int x, y;
@@ -272,12 +288,15 @@ void cons_newline(struct CONSOLE *cons)
 	return;
 }
 
-// 콘솔 명령어 실행 함수
-// @param cmdline: 명령어 문자열
-// @param cons: 콘솔 구조체 포인터
-// @param fat: FAT 테이블 포인터
-// @param memtotal: 총 메모리 크기
-// @return: void
+/**
+ * @brief 콘솔 명령어 실행 함수
+ * 
+ * @param cmdline: 명령어 문자열
+ * @param cons: 콘솔 구조체 포인터
+ * @param fat: FAT 테이블 포인터
+ * @param memtotal: 총 메모리 크기
+ * @return: void 
+ */
 void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, int memtotal)
 {
     if (strcmp(cmdline, "mem") == 0 && cons->sht != 0) {
@@ -302,10 +321,13 @@ void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, int memtotal)
     return;
 }
 
-// mem command (메모리 사용량 표시)
-// @param cons: 콘솔 구조체 포인터
-// @param memtotal: 총 메모리 크기
-// @return: void
+/**
+ * @brief mem command (메모리 사용량 표시)
+ *
+ * @param cons: 콘솔 구조체 포인터
+ * @param memtotal: 총 메모리 크기
+ * @return: void 
+ */
 void cmd_mem(struct CONSOLE *cons, int memtotal)
 {
     // mem command
@@ -316,9 +338,12 @@ void cmd_mem(struct CONSOLE *cons, int memtotal)
     return;
 }
 
-// cls/clear command (콘솔 화면 지우기)
-// @param cons: 콘솔 구조체 포인터
-// @return: void
+/**
+ * @brief cls/clear command (콘솔 화면 지우기)
+ * 
+ * @param cons: 콘솔 구조체 포인터
+ * @return: void
+ */
 void cmd_cls(struct CONSOLE *cons)
 {
     // cls/clear command
@@ -334,9 +359,11 @@ void cmd_cls(struct CONSOLE *cons)
     return;
 }
 
-// dir/ls command (디렉토리 목록 표시)
-// @param cons: 콘솔 구조체 포인터
-// @return: void
+/**
+ * @brief dir/ls command (디렉토리 목록 표시)
+ * @param cons: 콘솔 구조체 포인터
+ * @return: void
+ */
 void cmd_dir(struct CONSOLE *cons)
 {
     // dir/ls command
@@ -364,10 +391,13 @@ void cmd_dir(struct CONSOLE *cons)
     return;
 }
 
-// exit command (콘솔 종료 및 태스크 종료)
-// @param cons: 콘솔 구조체 포인터
-// @param fat: FAT 테이블 포인터
-// @return: void
+/**
+ * @brief exit command (콘솔 종료 및 태스크 종료)
+ * 
+ * @param cons: 콘솔 구조체 포인터
+ * @param fat: FAT 테이블 포인터
+ * @return: void
+ */
 void cmd_exit(struct CONSOLE *cons, int *fat)
 {
     struct MEMMAN *memman = (struct MEMMAN *) MEMMAN_ADDR;
@@ -390,11 +420,14 @@ void cmd_exit(struct CONSOLE *cons, int *fat)
     }
 }
 
-// start command (새 콘솔 생성 후 앱 실행)
-// @param cons: 콘솔 구조체 포인터
-// @param cmdline: 명령어 문자열
-// @param memtotal: 총 메모리 크기
-// @return: void
+/**
+ * @brief start command (새 콘솔 생성 후 앱 실행)
+ * 
+ * @param cons: 콘솔 구조체 포인터
+ * @param cmdline: 명령어 문자열
+ * @param memtotal: 총 메모리 크기
+ * @return: void
+ */
 void cmd_start(struct CONSOLE *cons, char *cmdline, int memtotal)
 {
 	struct SHTCTL *shtctl = (struct SHTCTL *) *((int *) 0x0fe4);
@@ -411,11 +444,14 @@ void cmd_start(struct CONSOLE *cons, char *cmdline, int memtotal)
 	return;
 }
 
-// ncst command (새 콘솔 생성 후 명령어 실행)
-// @param cons: 콘솔 구조체 포인터
-// @param cmdline: 명령어 문자열
-// @param memtotal: 총 메모리 크기
-// @return: void
+/**
+ * @brief ncst command (새 콘솔에서 명령어 실행)
+ *
+ * @param cons: 콘솔 구조체 포인터
+ * @param cmdline: 명령어 문자열
+ * @param memtotal: 총 메모리 크기
+ * @return: void
+ */
 void cmd_ncst(struct CONSOLE *cons, char *cmdline, int memtotal)
 {
 	struct TASK *task = open_constask(0, memtotal);
@@ -429,10 +465,13 @@ void cmd_ncst(struct CONSOLE *cons, char *cmdline, int memtotal)
 	return;
 }
 
-// langmode command (언어 모드 설정)
-// @param cons: 콘솔 구조체 포인터
-// @param cmdline: 명령어 문자열
-// @return: void
+/**
+ * @brief langmode command (언어 모드 설정)
+ * 
+ * @param cons: 콘솔 구조체 포인터
+ * @param cmdline: 명령어 문자열
+ * @return: void
+ */
 void cmd_langmode(struct CONSOLE *cons, char *cmdline)
 {
     struct TASK *task = task_now();
@@ -454,11 +493,14 @@ void cmd_langmode(struct CONSOLE *cons, char *cmdline)
     return;
 }
 
-// 앱 실행 함수
-// @param cons: 콘솔 구조체 포인터
-// @param fat: FAT 테이블 포인터
-// @param cmdline: 명령어 문자열
-// @return: 성공 시 1, 실패 시 0
+/**
+ * @brief 애플리케이션 실행 명령어 처리 함수
+ *
+ * @param cons: 콘솔 구조체 포인터
+ * @param fat: FAT 테이블 포인터
+ * @param cmdline: 명령어 문자열
+ * @return: 성공 시 1, 실패 시 0
+ */
 int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
 {
     struct MEMMAN *memman = (struct MEMMAN *) MEMMAN_ADDR;
@@ -531,9 +573,14 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
     return 0;
 }
 
-// 하리보테 API 함수
-// @param edi, esi, ebp, esp, ebx, edx, ecx, eax: 레지스터 값
-// @return: eax 레지스터 값 포인터
+/**
+ * @brief HRB API 함수
+ * 
+ * 레지스터를 통해 호출되며 다양한 시스템 기능 제공
+ * 
+ * @param: edi, esi, ebp, esp, ebx, edx, ecx, eax
+ * @return: eax 레지스터 값 포인터
+ */
 int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax)
 {
     struct TASK *task = task_now();
@@ -745,12 +792,14 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
     return 0;
 }
 
-// 하리보테 API의 선 그리기 함수
-// @param sht: 그릴 시트 포인터
-// @param x0, y0: 시작 좌표
-// @param x1, y1: 끝 좌표
-// @param col: 선 색상
-// @return: void
+/** @brief HRB API 선 그리기 함수
+ *
+ * @param sht: 그릴 시트 포인터
+ * @param x0, y0: 시작 좌표
+ * @param x1, y1: 끝 좌표
+ * @param col: 선 색상
+ * @return: void
+ */
 void hrb_api_linewin(struct SHEET *sht, int x0, int y0, int x1, int y1, int col)
 {
     int i, x, y, len, dx, dy;
@@ -795,9 +844,12 @@ void hrb_api_linewin(struct SHEET *sht, int x0, int y0, int x1, int y1, int col)
     return;
 }
 
-// INT 0C 핸들러 (스택 예외)
-// @param esp: 스택 포인터
-// @return: 새로운 스택 포인터
+/** 
+ * @brief INT 0C 핸들러 (스택 예외)
+ * 
+ * @param esp: 스택 포인터
+ * @return: 새로운 스택 포인터
+ */
 int *inthandler0c(int *esp) {
     struct TASK *task = task_now();
     struct CONSOLE *cons = task->cons;
@@ -808,9 +860,12 @@ int *inthandler0c(int *esp) {
     return &(task->tss.esp0); // ABEND
 }
 
-// INT 0D 핸들러 (일반 보호 예외)
-// @param esp: 스택 포인터
-// @return: 새로운 스택 포인터 
+/** 
+ * @brief INT 0D 핸들러 (일반 보호 예외)
+ *
+ * @param esp: 스택 포인터
+ * @return: 새로운 스택 포인터 
+ */
 int *inthandler0d(int *esp)
 {
     struct TASK *task = task_now();
