@@ -601,9 +601,11 @@ void hangul_automata(struct CONSOLE *cons, struct TASK *task, int key)
                 int complex = get_composite_jung(task->hangul_idx[1], idx_jung);
 
                 if (complex != -1) {
+                    // 조합 가능
                     task->hangul_idx[1] = complex;
                     draw_composing_char(cons, cons->cur_x - 16, cons->cur_y, task->hangul_idx[0], task->hangul_idx[1], -1);
-                } else {
+                } else {    
+                    // 조합 불가
                     task->hangul_state = 0;
                     hangul_automata(cons, task, key);
                 }
@@ -752,4 +754,13 @@ int hangul_automata_delete(struct CONSOLE *cons, struct TASK *task)
     }
 
     return 1; // 처리됨
+}
+
+void initialize_hangul(struct TASK *task)
+{
+    task->hangul_state = 0;
+    task->hangul_idx[0] = -1;
+    task->hangul_idx[1] = -1;
+    task->hangul_idx[2] = -1;
+    return;
 }

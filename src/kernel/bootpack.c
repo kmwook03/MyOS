@@ -256,6 +256,9 @@ void HariMain(void)
 					fifo32_put(&keycmd, KEYCMD_LED);
 					fifo32_put(&keycmd, key_leds);
 				}
+				if (i == 256 + 0x3b && key_win != 0) {
+					fifo32_put(&key_win->task->fifo, i); // F1 눌림
+				}
 				if (i == 256 + 0x57) { // F11 눌림
 					sheet_updown(shtctl->sheets[1], shtctl->top - 1); // 콘솔을 제일 위로 가져옴(마우스 바로 아래)
 				}
@@ -265,15 +268,6 @@ void HariMain(void)
 				if (i == 256 + 0xfe) { // 키보드 데이터 수신 실패
 					wait_KBC_sendready();
 					io_out8(PORT_KEYCMD, keycmd_wait);
-				}
-				if (i == 256 + 0x22 && key_ctrl != 0 && key_win != 0) {	// Ctrl + G 눌림
-					cons_putstr0(task->cons, "\nlangmode changed\n");
-					if (key_win != 0) {
-						io_cli(); // CPU 인터럽트 비활성화
-						task->langmode ^= 1; // 언어 모드 토글
-						io_sti(); // CPU 인터럽트 활성화
-					}
-					continue;
 				}
 				if (i == 256 + 0x2e && key_ctrl != 0 && key_win != 0) { // Ctrl + C 눌림
 					task = key_win->task;

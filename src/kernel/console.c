@@ -101,6 +101,7 @@ void console_task(struct SHEET *sht, int memtotal)
                         }
 					}
 				} else if (i == 10 + 256) {                     // enter: 줄바꿈
+                    initialize_hangul(task);          // 한글 오토마타 초기화
                     cons_putchar(&cons, ' ', 0);                // 커서 지우기
 					cmdline[cons.cur_x / 8 - 2] = 0;            // 명령어 라인 종료 문자
 					cons_newline(&cons);                        // 줄바꿈
@@ -109,7 +110,10 @@ void console_task(struct SHEET *sht, int memtotal)
                         cmd_exit(&cons, fat);                   // 콘솔 태스크 종료
                     }
                     cons_putchar(&cons, '>', 1);                // 프롬프트 출력
-				} else {
+				} else if (i == 256 + 0x3b) {	// F1 눌림
+                    // 언어 모드 변경
+                    task->langmode ^= 1;
+                } else {
                     // 일반 문자 입출력
                     if (task->langmode == 1) {                  // 한글 모드
                         int key = i - 256;                      // 입력된 키 값 (ASCII 코드)
