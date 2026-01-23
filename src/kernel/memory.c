@@ -1,10 +1,33 @@
 // memory management
 
+/**
+ * @file memory.c
+ * @brief 메모리 관리 함수 구현
+ * 
+ * 하리보테 OS는 기본적으로 가변 메모리 관리 방식을 사용합니다. (하단에 4KB 단위 고정 메모리 관리 함수도 있긴 하지만 페이징을 위한 밑작업으로 봐야함)
+ * 이 파일에는 메모리 테스트, 메모리 관리자 초기화, 메모리 할당 및 해제 함수가 포함되어 있습니다.
+ */
+
 #include "../include/bootpack.h"
 
 #define EFLAGS_AC_BIT      0x00040000
 #define CR0_CACHE_DISABLE  0x60000000
 
+/**
+ * @brief 메모리 테스트 함수
+ * 
+ * 1. CPU가 386인지 486 이상인지 확인
+ * 
+ * 2. 486 이상일 경우 캐시를 비활성화 (캐시가 활성화 되면 메모리 테스트가 올바르게 수행되지 않을 수 있음)
+ * 
+ * 3. 지정된 메모리 영역에 대해 메모리 테스트 수행
+ * 
+ * 4. 486 이상일 경우 캐시를 다시 활성화
+ * 
+ * @param start: 테스트 시작 주소
+ * @param end: 테스트 종료 주소
+ * @return: 테스트된 메모리 크기 (바이트 단위)
+ */
 unsigned int memtest(unsigned int start, unsigned int end)
 {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
     char flg486 = 0;
@@ -38,6 +61,12 @@ unsigned int memtest(unsigned int start, unsigned int end)
     return i;
 }
 
+/**
+ * @brief 메모리 관리자 초기화 함수.
+ * 
+ * @param man: 메모리 관리자 구조체 포인터
+ * @return: void
+ */
 void memman_init(struct MEMMAN *man)
 {
     man->frees = 0;
@@ -47,6 +76,12 @@ void memman_init(struct MEMMAN *man)
     return;
 }
 
+/**
+ * @brief 사용 가능한 전체 메모리 크기 반환 함수
+ * 
+ * @param man: 메모리 관리자 구조체 포인터
+ * @return: 사용 가능한 전체 메모리 크기 (바이트 단위)
+ */
 unsigned int memman_total(struct MEMMAN *man)
 {
     unsigned int i, t = 0;
@@ -56,6 +91,13 @@ unsigned int memman_total(struct MEMMAN *man)
     return t;
 }
 
+/**
+ * @brief 메모리 할당 함수
+ * 
+ * @param man: 메모리 관리자 구조체 포인터
+ * @param size: 할당할 메모리 크기 (바이트 단위)
+ * @return: 할당된 메모리의 시작 주소, 할당 실패 시 0 반환
+ */
 unsigned int memman_alloc(struct MEMMAN *man, unsigned int size)
 {
     unsigned int i, a;
@@ -76,6 +118,14 @@ unsigned int memman_alloc(struct MEMMAN *man, unsigned int size)
     return 0; // cannot allocate
 }
 
+/**
+ * @brief 메모리 해제 함수
+ * 
+ * @param man: 메모리 관리자 구조체 포인터
+ * @param addr: 해제할 메모리의 시작 주소
+ * @param size: 해제할 메모리 크기 (바이트 단위)
+ * @return: 0: 성공, -1: 실패
+ */
 int memman_free(struct MEMMAN *man, unsigned int addr, unsigned int size)
 {
     int i, j;
@@ -130,6 +180,13 @@ int memman_free(struct MEMMAN *man, unsigned int addr, unsigned int size)
     return -1; // cannot free
 }
 
+/**
+ * @brief 4KB 단위 메모리 할당 함수
+ * 
+ * @param man: 메모리 관리자 구조체 포인터
+ * @param size: 할당할 메모리 크기 (바이트 단위)
+ * @return: 할당된 메모리의 시작 주소, 할당 실패 시 0 반환
+ */
 unsigned int memman_alloc_4k(struct MEMMAN *man, unsigned int size)
 {
     unsigned int a;
@@ -138,6 +195,14 @@ unsigned int memman_alloc_4k(struct MEMMAN *man, unsigned int size)
     return a;
 }
 
+/**
+ * @brief 4KB 단위 메모리 해제 함수
+ * 
+ * @param man: 메모리 관리자 구조체 포인터
+ * @param addr: 해제할 메모리의 시작 주소
+ * @param size: 해제할 메모리 크기 (바이트 단위)
+ * @return: 0: 성공, -1: 실패
+ */
 int memman_free_4k(struct MEMMAN *man, unsigned int addr, unsigned int size)
 {
     int i;

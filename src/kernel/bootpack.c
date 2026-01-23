@@ -10,6 +10,15 @@ void keywin_on(struct SHEET *key_win);
 void close_constask(struct TASK *task);
 void close_console(struct SHEET *sht);
 
+/**
+ * @brief OS 메인 함수
+ * 
+ * 시스템 초기화 및 메인 루프 실행
+ * 
+ * 키보드 및 마우스 이벤트 처리
+ * 
+ * @return: void
+ */
 void HariMain(void)
 {
 	// Declare Structures
@@ -138,27 +147,6 @@ void HariMain(void)
 	}
 	*((int *) 0x0fe8) = (int) korean;														// 한글 폰트 주소 저장 (0x0fe8)
 	memman_free_4k(memman, (int) fat, 4*2880);
-
-	// 폰트 주소 가져오기
-	unsigned char *korean_font = (unsigned char *) *((int *) 0x0fe8);
-
-	// 테스트 1: "가" (조합형 코드 0x8861)
-	put_johab(sht_back, 100, 100, COL8_FFFFFF, korean_font, 0x8861);
-	// 테스트 2: "나" (조합형 코드 0x9061)
-	put_johab(sht_back, 120, 100, COL8_FFFFFF, korean_font, 0x9061);
-	// 테스트 3: "다" (조합형 코드 0x9461)
-	put_johab(sht_back, 140, 100, COL8_FFFFFF, korean_font, 0x9461);
-	// 테스트 4: "한" (조합형 코드 0xd065)
-	put_johab(sht_back, 100, 120, COL8_FFFFFF, korean_font, 0xd065);
-	// 테스트 5: "글" (조합형 코드 0x8b69)
-	put_johab(sht_back, 120, 120, COL8_FFFFFF, korean_font, 0x8b69);
-	// 테스트 6: "좋" (조합형 코드 0xb9bd)
-	put_johab(sht_back, 140, 120, COL8_FFFFFF, korean_font, 0xb9bd);
-	// 테스트 7: "아" (조합형 코드 0xb461)
-	put_johab(sht_back, 160, 120, COL8_FFFFFF, korean_font, 0xb461);
-	char ks[40];
-	sprintf(ks, "한글출력성공!!");
-	putstr_utf8(sht_back, 100, 140, COL8_FFFFFF, (unsigned char *) ks);
 
 	// 메인 루프
 	for (;;) {
@@ -385,6 +373,11 @@ void HariMain(void)
 	}
 }
 
+/**
+ * @brief 비활성화된 키보드 윈도우 처리
+ * 
+ * @param key_win: 비활성화할 시트 포인터
+ */
 void keywin_off(struct SHEET *key_win)
 {
 	change_wtitle8(key_win, 0);
@@ -394,6 +387,11 @@ void keywin_off(struct SHEET *key_win)
 	return;
 }
 
+/**
+ * @brief 활성화된 키보드 윈도우 처리
+ * 
+ * @param key_win: 활성화할 시트 포인터
+ */
 void keywin_on(struct SHEET *key_win)
 {
 	change_wtitle8(key_win, 1);
@@ -403,6 +401,13 @@ void keywin_on(struct SHEET *key_win)
 	return;
 }
 
+/**
+ * @brief 콘솔 태스크 열기
+ * 
+ * @param sht: 콘솔 시트 포인터
+ * @param memtotal: 총 메모리 크기
+ * @return struct TASK*: 생성된 콘솔 태스크 포인터
+ */
 struct TASK *open_constask(struct SHEET *sht, unsigned int memtotal)
 {
 	struct MEMMAN *memman = (struct MEMMAN *) MEMMAN_ADDR;
@@ -424,6 +429,13 @@ struct TASK *open_constask(struct SHEET *sht, unsigned int memtotal)
 	return task;
 }
 
+/**
+ * @brief 콘솔 창 열기
+ * 
+ * @param shtctl: 시트 컨트롤 포인터
+ * @param memtotal: 총 메모리 크기
+ * @return struct SHEET*: 생성된 콘솔 시트 포인터
+ */
 struct SHEET *open_console(struct SHTCTL *shtctl, unsigned int memtotal)
 {
 	struct MEMMAN *memman = (struct MEMMAN *) MEMMAN_ADDR;
@@ -437,6 +449,11 @@ struct SHEET *open_console(struct SHTCTL *shtctl, unsigned int memtotal)
 	return sht;
 }
 
+/**
+ * @brief 콘솔 태스크 닫기
+ * 
+ * @param task: 닫을 태스크 포인터
+ */
 void close_constask(struct TASK *task)
 {
 	struct MEMMAN *memman = (struct MEMMAN *) MEMMAN_ADDR;
@@ -447,6 +464,11 @@ void close_constask(struct TASK *task)
 	return;
 }
 
+/**
+ * @brief 콘솔 창 닫기
+ * 
+ * @param sht: 닫을 시트 포인터
+ */
 void close_console(struct SHEET *sht)
 {
 	struct MEMMAN *memman = (struct MEMMAN *) MEMMAN_ADDR;

@@ -5,6 +5,14 @@
 struct FIFO32 *keyfifo;
 int keydata0;
 
+/**
+ * @brief 키보드 인터럽트 핸들러
+ * 
+ * 키보드에서 데이터가 들어왔을 때 호출되는 인터럽트 핸들러
+ * 
+ * @param esp: 스택 포인터
+ * @return: void
+ */
 void inthandler21(int *esp)
 {
     int data;
@@ -20,6 +28,13 @@ void inthandler21(int *esp)
 #define KEYCMD_WRITE_MODE       0x60
 #define KBC_MODE                0x47
 
+/**
+ * @brief 키보드 컨트롤러 준비 대기 함수
+ * 
+ * 키보드 컨트롤러가 데이터를 보낼 준비가 될 때까지 대기
+ * 
+ * @return: void
+ */
 void wait_KBC_sendready(void)
 {
     for (;;) {
@@ -29,6 +44,15 @@ void wait_KBC_sendready(void)
     }
 }
 
+/**
+ * @brief 키보드 초기화 함수
+ * 
+ * 키보드 컨트롤러를 초기화하고 FIFO 버퍼 설정
+ * 
+ * @param fifo: 키보드 데이터 저장용 FIFO 버퍼 포인터
+ * @param data0: 키보드 데이터에 더해질 오프셋 값
+ * @return: void
+ */
 void init_keyboard(struct FIFO32 *fifo, int data0)
 {
     keyfifo = fifo;

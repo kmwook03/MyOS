@@ -2,6 +2,16 @@
 
 #include "../include/bootpack.h"
 
+/**
+ * @brief 윈도우 생성 함수
+ * 
+ * @param buf: 윈도우 버퍼 포인터
+ * @param xsize: 윈도우 가로 크기
+ * @param ysize: 윈도우 세로 크기
+ * @param title: 윈도우 제목 문자열
+ * @param act: 활성화 상태 (0: 비활성화, 1: 활성화)
+ * @return: void
+ */
 void make_window8(unsigned char *buf, int xsize, int ysize, char *title, char act)
 {
 	boxfill8(buf, xsize, COL8_C6C6C6, 0,         0,         xsize - 1, 0        );
@@ -17,6 +27,15 @@ void make_window8(unsigned char *buf, int xsize, int ysize, char *title, char ac
 	return;
 }
 
+/**
+ * @brief 윈도우 제목 표시줄 생성 함수
+ * 
+ * @param buf: 윈도우 버퍼 포인터
+ * @param xsize: 윈도우 가로 크기
+ * @param title: 윈도우 제목 문자열
+ * @param act: 활성화 상태 (0: 비활성화, 1: 활성화)
+ * @return: void
+ */
 void make_wtitle8(unsigned char *buf, int xsize, char *title, char act)
 {
 	static char closebtn[14][16] = {
@@ -45,6 +64,7 @@ void make_wtitle8(unsigned char *buf, int xsize, char *title, char act)
         tbc = COL8_848484;
     }
 
+	// TODO: 제목에 한글도 적을 수 있도록 해야함.
     boxfill8(buf, xsize, tbc, 3, 3, xsize - 4, 20);
     putfonts8_asc(buf, xsize, 24, 4, tc, title);
 	for (y = 0; y < 14; y++) {
@@ -65,6 +85,13 @@ void make_wtitle8(unsigned char *buf, int xsize, char *title, char act)
     return;
 }
 
+/**
+ * @brief 윈도우 제목 표시줄 상태 변경 함수
+ * 
+ * @param sht: 윈도우 시트 포인터
+ * @param act: 활성화 상태 (0: 비활성화, 1: 활성화)
+ * @return: void
+ */
 void change_wtitle8(struct SHEET *sht, char act)
 {
 	int x, y, xsize = sht->bxsize;
@@ -95,6 +122,18 @@ void change_wtitle8(struct SHEET *sht, char act)
 	return;
 }
 
+/**
+ * @brief 시트에 문자 출력 함수
+ * 
+ * @param sht: 시트 포인터
+ * @param x: 출력할 x 좌표
+ * @param y: 출력할 y 좌표
+ * @param c: 출력할 색상
+ * @param b: 배경 색상
+ * @param s: 출력할 문자열
+ * @param l: 문자열 길이
+ * @return: void
+ */
 void putfonts8_asc_sht(struct SHEET *sht, int x, int y, int c, int b, char *s, int l)
 {
 	boxfill8(sht->buf, sht->bxsize, b, x, y, x + l * 8 - 1, y + 15);
@@ -103,6 +142,17 @@ void putfonts8_asc_sht(struct SHEET *sht, int x, int y, int c, int b, char *s, i
 	return;
 }
 
+/**
+ * @brief 텍스트박스 생성 함수
+ * 
+ * @param sht: 시트 포인터
+ * @param x0: 텍스트박스 시작 x 좌표
+ * @param y0: 텍스트박스 시작 y 좌표
+ * @param sx: 텍스트박스 가로 크기
+ * @param sy: 텍스트박스 세로 크기
+ * @param c: 텍스트박스 배경 색상
+ * @return: void
+ */
 void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c)
 {
 	int x1 = x0 + sx, y1 = y0 + sy;
