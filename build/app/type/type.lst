@@ -1,0 +1,79 @@
+     1 00000000                                 [FORMAT "WCOFF"]
+     2 00000000                                 [INSTRSET "i486p"]
+     3 00000000                                 [OPTIMIZE 1]
+     4 00000000                                 [OPTION 1]
+     5 00000000                                 [BITS 32]
+     6 00000000                                 	EXTERN	_api_cmdline
+     7 00000000                                 	EXTERN	_api_fopen
+     8 00000000                                 	EXTERN	_api_fread
+     9 00000000                                 	EXTERN	_api_putstr_len
+    10 00000000                                 	EXTERN	_api_end
+    11 00000000                                 	EXTERN	_api_putstr
+    12 00000000                                 [FILE "type.c"]
+    13                                          [SECTION .data]
+    14 00000000                                 LC0:
+    15 00000000 46 69 6C 65 20 6E 6F 74 20 66   	DB	"File not found.",0x0A,0x00
+       0000000A 6F 75 6E 64 2E 0A 00 
+    16                                          [SECTION .text]
+    17 00000000                                 	GLOBAL	_HariMain
+    18 00000000                                 _HariMain:
+    19 00000000 55                              	PUSH	EBP
+    20 00000001 89 E5                           	MOV	EBP,ESP
+    21 00000003 56                              	PUSH	ESI
+    22 00000004 53                              	PUSH	EBX
+    23 00000005 81 EC 00000120                  	SUB	ESP,288
+    24 0000000B 8D 5D D8                        	LEA	EBX,DWORD [-40+EBP]
+    25 0000000E 6A 1E                           	PUSH	30
+    26 00000010 53                              	PUSH	EBX
+    27 00000011 E8 [00000000]                   	CALL	_api_cmdline
+    28 00000016 5A                              	POP	EDX
+    29 00000017 89 D8                           	MOV	EAX,EBX
+    30 00000019 59                              	POP	ECX
+    31 0000001A 80 7D D8 20                     	CMP	BYTE [-40+EBP],32
+    32 0000001E 7E 06                           	JLE	L19
+    33 00000020                                 L6:
+    34 00000020 40                              	INC	EAX
+    35 00000021 80 38 20                        	CMP	BYTE [EAX],32
+    36 00000024 7F FA                           	JG	L6
+    37 00000026                                 L19:
+    38 00000026 80 38 20                        	CMP	BYTE [EAX],32
+    39 00000029 74 4A                           	JE	L11
+    40 0000002B                                 L21:
+    41 0000002B 50                              	PUSH	EAX
+    42 0000002C E8 [00000000]                   	CALL	_api_fopen
+    43 00000031 5E                              	POP	ESI
+    44 00000032 89 C3                           	MOV	EBX,EAX
+    45 00000034 85 C0                           	TEST	EAX,EAX
+    46 00000036 74 30                           	JE	L12
+    47 00000038                                 L13:
+    48 00000038 53                              	PUSH	EBX
+    49 00000039 8D B5 FFFFFED8                  	LEA	ESI,DWORD [-296+EBP]
+    50 0000003F 68 00000100                     	PUSH	256
+    51 00000044 56                              	PUSH	ESI
+    52 00000045 E8 [00000000]                   	CALL	_api_fread
+    53 0000004A 83 C4 0C                        	ADD	ESP,12
+    54 0000004D 85 C0                           	TEST	EAX,EAX
+    55 0000004F 74 0B                           	JE	L17
+    56 00000051 50                              	PUSH	EAX
+    57 00000052 56                              	PUSH	ESI
+    58 00000053 E8 [00000000]                   	CALL	_api_putstr_len
+    59 00000058 5A                              	POP	EDX
+    60 00000059 59                              	POP	ECX
+    61 0000005A EB DC                           	JMP	L13
+    62 0000005C                                 L17:
+    63 0000005C E8 [00000000]                   	CALL	_api_end
+    64 00000061 8D 65 F8                        	LEA	ESP,DWORD [-8+EBP]
+    65 00000064 5B                              	POP	EBX
+    66 00000065 5E                              	POP	ESI
+    67 00000066 5D                              	POP	EBP
+    68 00000067 C3                              	RET
+    69 00000068                                 L12:
+    70 00000068 68 [00000000]                   	PUSH	LC0
+    71 0000006D E8 [00000000]                   	CALL	_api_putstr
+    72 00000072 58                              	POP	EAX
+    73 00000073 EB E7                           	JMP	L17
+    74 00000075                                 L11:
+    75 00000075 40                              	INC	EAX
+    76 00000076 80 38 20                        	CMP	BYTE [EAX],32
+    77 00000079 74 FA                           	JE	L11
+    78 0000007B EB AE                           	JMP	L21

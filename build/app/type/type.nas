@@ -1,0 +1,78 @@
+[FORMAT "WCOFF"]
+[INSTRSET "i486p"]
+[OPTIMIZE 1]
+[OPTION 1]
+[BITS 32]
+	EXTERN	_api_cmdline
+	EXTERN	_api_fopen
+	EXTERN	_api_fread
+	EXTERN	_api_putstr_len
+	EXTERN	_api_end
+	EXTERN	_api_putstr
+[FILE "type.c"]
+[SECTION .data]
+LC0:
+	DB	"File not found.",0x0A,0x00
+[SECTION .text]
+	GLOBAL	_HariMain
+_HariMain:
+	PUSH	EBP
+	MOV	EBP,ESP
+	PUSH	ESI
+	PUSH	EBX
+	SUB	ESP,288
+	LEA	EBX,DWORD [-40+EBP]
+	PUSH	30
+	PUSH	EBX
+	CALL	_api_cmdline
+	POP	EDX
+	MOV	EAX,EBX
+	POP	ECX
+	CMP	BYTE [-40+EBP],32
+	JLE	L19
+L6:
+	INC	EAX
+	CMP	BYTE [EAX],32
+	JG	L6
+L19:
+	CMP	BYTE [EAX],32
+	JE	L11
+L21:
+	PUSH	EAX
+	CALL	_api_fopen
+	POP	ESI
+	MOV	EBX,EAX
+	TEST	EAX,EAX
+	JE	L12
+L13:
+	PUSH	EBX
+	LEA	ESI,DWORD [-296+EBP]
+	PUSH	256
+	PUSH	ESI
+	CALL	_api_fread
+	ADD	ESP,12
+	TEST	EAX,EAX
+	JE	L17
+	PUSH	EAX
+	PUSH	ESI
+	CALL	_api_putstr_len
+	POP	EDX
+	POP	ECX
+	JMP	L13
+L17:
+	CALL	_api_end
+	LEA	ESP,DWORD [-8+EBP]
+	POP	EBX
+	POP	ESI
+	POP	EBP
+	RET
+L12:
+	PUSH	LC0
+	CALL	_api_putstr
+	POP	EAX
+	JMP	L17
+L11:
+	INC	EAX
+	CMP	BYTE [EAX],32
+	JE	L11
+	JMP	L21

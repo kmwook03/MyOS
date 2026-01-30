@@ -16,7 +16,7 @@ void task_add(struct TASK *task)
     struct TASKLEVEL *tl = &taskctl->level[task->level];
     tl->tasks[tl->running] = task;
     tl->running++;
-    task->flags = 2; // mark as running
+    task->flags = 2; // 실행 중으로 설정
     return;
 }
 
@@ -39,7 +39,7 @@ void task_remove(struct TASK *task)
     if (tl->now >= tl->running) {
         tl->now = 0; // adjust now index
     }
-    task->flags = 1; // not running
+    task->flags = 1; // 실행 중이 아님
 
     for (; i<tl->running; i++) {
         tl->tasks[i] = tl->tasks[i + 1];
@@ -48,17 +48,24 @@ void task_remove(struct TASK *task)
     return;
 }
 
+/**
+ * @brief 태스크 스위칭 보조 함수
+ * 
+ * 실행 중인 태스크가 있는 가장 높은 레벨을 찾아 현재 레벨로 설정
+ * 
+ * @return: void
+ */
 void task_switchsub(void)
 {
     int i;
-    // find the highest level with running tasks
+    // 실행 중인 태스크가 있는 가장 높은 레벨 찾기
     for (i = 0; i < MAX_TASKLEVELS; i++) {
         if (taskctl->level[i].running > 0) {
             break;
         }
     }
-    taskctl->now_lv = i;
-    taskctl->lv_change = 0;
+    taskctl->now_lv = i;        // 현재 레벨 설정
+    taskctl->lv_change = 0;     // 레벨 변경 플래그 클리어
     return;
 }
 
@@ -143,23 +150,23 @@ struct TASK *task_alloc(void)
 void task_run(struct TASK *task, int level, int priority)
 {
     if (level < 0) {
-        level = task->level; // keep current level
+        level = task->level; // 현재 레벨 유지
     }
     if (priority > 0) {
-        task->priority = priority;
+        task->priority = priority; // 우선순위 갱신
     }
 
     if (task->flags == 2 && task->level != level) {
-        // change level of running task
+        // 실행 중인 태스크의 레벨 변경
         task_remove(task);
     }
     if (task->flags != 2) {
-        // add new task to running tasks
+        // 실행 중인 태스크가 아니면 실행 중인 태스크로 추가
         task->level = level;
         task_add(task);
     }
 
-    taskctl->lv_change = 1; // level change required
+    taskctl->lv_change = 1; // 레벨 변경 필요
     return;
 }
 
@@ -170,7 +177,7 @@ void task_sleep(struct TASK *task)
         now_task = task_now();
         task_remove(task);
         if (task == now_task) {
-            // switch to next task
+            // 다음 태스크로 전환
             task_switchsub();
             now_task = task_now();
             farjmp(0, now_task->sel);
@@ -180,22 +187,30 @@ void task_sleep(struct TASK *task)
     return;
 }
 
+/**
+ * @brief 태스크 스위칭 함수
+ * 
+ * MLQ + 라운드 로빈(RR) 방식으로 태스크를 전환
+ * 
+ * @return: void
+ */
 void task_switch(void)
 {
-    struct TASKLEVEL *tl = &taskctl->level[taskctl->now_lv];
+    struct TASKLEVEL *tl = &taskctl->level[taskctl->now_lv];    // 현재 레벨
     struct TASK *new_task, *now_task = tl->tasks[tl->now];
-    tl->now++;
-    if (tl->now == tl->running) {
-        tl->now = 0;
+    tl->now++;                      // 현재 레벨의 다음 태스크로 변경
+    
+    if (tl->now == tl->running) {   // 현재 레벨의 태스크가 모두 실행되었으면
+        tl->now = 0;                // 처음으로 돌아감
     }
-    if (taskctl->lv_change != 0) {
-        task_switchsub();
-        tl = &taskctl->level[taskctl->now_lv];
+    if (taskctl->lv_change != 0) {              // 레벨 변경이 필요하면
+        task_switchsub();                       // 실행 중인 태스크 중 가장 높은 레벨로 변경
+        tl = &taskctl->level[taskctl->now_lv];  // 현재 레벨 갱신
     }
-    new_task = tl->tasks[tl->now];
-    timer_settime(task_timer, new_task->priority);
-    if (new_task != now_task) {
-        farjmp(0, new_task->sel);
+    new_task = tl->tasks[tl->now];                  // 새로운 태스크 선택
+    timer_settime(task_timer, new_task->priority);  // 타이머 설정 (RR 방식)
+    if (new_task != now_task) {    // 태스크가 변경되었으면
+        farjmp(0, new_task->sel);  // 태스크 전환 (TSS를 이용한 하드웨어 태스크 스위칭)
     }
     return;
 }

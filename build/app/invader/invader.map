@@ -1,0 +1,51 @@
+text size :   2350(0x0092E)
+data size :    292(0x00124)
+bss  size :      0(0x00000)
+
+0x00000024 : (.text)
+0x00000024 : _HariMain
+0x00000680 : _putstr
+0x000007EC : _wait
+0x00000845 : _setdec8
+0x00000875 : __alloca
+0x00000875 : (.text)
+0x0000087D : _api_openwin
+0x0000087D : (.text)
+0x0000089F : _api_putstrwin
+0x0000089F : (.text)
+0x000008C7 : _api_boxfilwin
+0x000008C7 : (.text)
+0x000008EF : _api_refreshwin
+0x000008EF : (.text)
+0x00000911 : _api_getkey
+0x00000911 : (.text)
+0x0000091D : _api_alloctimer
+0x0000091D : (.text)
+0x00000925 : _api_inittimer
+0x00000925 : (.text)
+0x00000937 : _api_settimer
+0x00000937 : (.text)
+0x00000949 : (.text)
+0x00000949 : _HariStartup
+0x00000000 : (.data)
+0x00000000 : (.data)
+0x00000000 : (.data)
+0x00000000 : (.data)
+0x00000000 : (.data)
+0x00000000 : (.data)
+0x00000000 : (.data)
+0x00000000 : (.data)
+0x00000000 : (.data)
+0x00000000 : (.data)
+0x00016800 : (.data)
+0x00000000 : (.bss)
+0x00000000 : (.bss)
+0x00000000 : (.bss)
+0x00000000 : (.bss)
+0x00000000 : (.bss)
+0x00000000 : (.bss)
+0x00000000 : (.bss)
+0x00000000 : (.bss)
+0x00000000 : (.bss)
+0x00000000 : (.bss)
+0x00000000 : (.bss)

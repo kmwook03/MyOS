@@ -1,0 +1,233 @@
+	.file	"file.c"
+	.text
+	.balign 2
+.globl _file_readfat
+	.def	_file_readfat;	.scl	2;	.type	32;	.endef
+_file_readfat:
+	pushl	%ebp
+	xorl	%ecx, %ecx
+	movl	%esp, %ebp
+	pushl	%edi
+	pushl	%esi
+	pushl	%ebx
+	movl	8(%ebp), %edi
+	movl	12(%ebp), %esi
+	xorl	%ebx, %ebx
+L6:
+	movzbl	1(%ecx,%esi), %eax
+	movzbl	(%ecx,%esi), %edx
+	sall	$8, %eax
+	orl	%eax, %edx
+	andl	$4095, %edx
+	movl	%edx, (%edi,%ebx,4)
+	movb	1(%ecx,%esi), %al
+	movzbl	2(%ecx,%esi), %edx
+	shrb	$4, %al
+	addl	$3, %ecx
+	sall	$4, %edx
+	movzbl	%al, %eax
+	orl	%edx, %eax
+	movl	%eax, 4(%edi,%ebx,4)
+	addl	$2, %ebx
+	cmpl	$2879, %ebx
+	jle	L6
+	popl	%ebx
+	popl	%esi
+	popl	%edi
+	popl	%ebp
+	ret
+	.balign 2
+.globl _file_loadfile
+	.def	_file_loadfile;	.scl	2;	.type	32;	.endef
+_file_loadfile:
+	pushl	%ebp
+	movl	%esp, %ebp
+	pushl	%edi
+	pushl	%esi
+	pushl	%ebx
+	movl	12(%ebp), %ecx
+	movl	8(%ebp), %esi
+	movl	16(%ebp), %ebx
+L10:
+	cmpl	$512, %ecx
+	jle	L27
+	xorl	%edx, %edx
+L23:
+	movl	%esi, %eax
+	movl	24(%ebp), %edi
+	sall	$9, %eax
+	addl	%edx, %eax
+	movb	(%eax,%edi), %al
+	movb	%al, (%edx,%ebx)
+	incl	%edx
+	cmpl	$511, %edx
+	jle	L23
+	movl	20(%ebp), %eax
+	subl	$512, %ecx
+	addl	$512, %ebx
+	movl	(%eax,%esi,4), %esi
+	jmp	L10
+L27:
+	xorl	%edx, %edx
+	cmpl	%ecx, %edx
+	jge	L9
+L18:
+	movl	%esi, %eax
+	movl	24(%ebp), %edi
+	sall	$9, %eax
+	addl	%edx, %eax
+	movb	(%eax,%edi), %al
+	movb	%al, (%edx,%ebx)
+	incl	%edx
+	cmpl	%ecx, %edx
+	jl	L18
+L9:
+	popl	%ebx
+	popl	%esi
+	popl	%edi
+	popl	%ebp
+	ret
+	.balign 2
+.globl _file_search
+	.def	_file_search;	.scl	2;	.type	32;	.endef
+_file_search:
+	pushl	%ebp
+	xorl	%ecx, %ecx
+	movl	%esp, %ebp
+	pushl	%edi
+	pushl	%esi
+	pushl	%ebx
+	subl	$16, %esp
+	movl	8(%ebp), %esi
+L33:
+	movb	$32, -28(%ebp,%ecx)
+	incl	%ecx
+	cmpl	$10, %ecx
+	jle	L33
+	xorl	%ecx, %ecx
+	xorl	%ebx, %ebx
+	cmpb	$0, (%esi)
+	je	L60
+L42:
+	xorl	%eax, %eax
+	cmpl	$10, %ecx
+	jg	L28
+	movb	(%ebx,%esi), %dl
+	cmpb	$46, %dl
+	je	L64
+L39:
+	leal	-97(%edx), %eax
+	movb	%dl, -28(%ebp,%ecx)
+	cmpb	$25, %al
+	ja	L41
+	leal	-32(%edx), %eax
+	movb	%al, -28(%ebp,%ecx)
+L41:
+	incl	%ecx
+L36:
+	incl	%ebx
+	cmpb	$0, (%ebx,%esi)
+	jne	L42
+L60:
+	movl	12(%ebp), %edx
+	xorl	%esi, %esi
+	leal	7136(%edx), %edi
+L56:
+	cmpb	$0, (%edx)
+	je	L44
+	testb	$24, 11(%edx)
+	jne	L54
+	movl	12(%ebp), %ebx
+	xorl	%ecx, %ecx
+	addl	%esi, %ebx
+L55:
+	movb	-28(%ebp,%ecx), %al
+	cmpb	%al, (%ebx)
+	jne	L54
+	incl	%ecx
+	incl	%ebx
+	movl	%edx, %eax
+	cmpl	$10, %ecx
+	jle	L55
+L28:
+	addl	$16, %esp
+	popl	%ebx
+	popl	%esi
+	popl	%edi
+	popl	%ebp
+	ret
+L54:
+	addl	$32, %edx
+	addl	$32, %esi
+	cmpl	%edi, %edx
+	jle	L56
+L44:
+	xorl	%eax, %eax
+	jmp	L28
+L64:
+	cmpl	$8, %ecx
+	jg	L39
+	movl	$8, %ecx
+	jmp	L36
+	.balign 2
+.globl _file_loadfile2
+	.def	_file_loadfile2;	.scl	2;	.type	32;	.endef
+_file_loadfile2:
+	pushl	%ebp
+	movl	%esp, %ebp
+	pushl	%edi
+	pushl	%esi
+	pushl	%ebx
+	pushl	%edx
+	movl	12(%ebp), %eax
+	movl	(%eax), %eax
+	pushl	%eax
+	movl	%eax, -16(%ebp)
+	pushl	$3932160
+	call	_memman_alloc_4k
+	pushl	$1064448
+	pushl	16(%ebp)
+	pushl	%eax
+	movl	%eax, %edi
+	pushl	-16(%ebp)
+	pushl	8(%ebp)
+	call	_file_loadfile
+	addl	$28, %esp
+	cmpl	$16, -16(%ebp)
+	jg	L68
+L66:
+	leal	-12(%ebp), %esp
+	movl	%edi, %eax
+	popl	%ebx
+	popl	%esi
+	popl	%edi
+	popl	%ebp
+	ret
+L68:
+	pushl	%edi
+	call	_tek_getsize
+	movl	%eax, %esi
+	popl	%eax
+	testl	%esi, %esi
+	jle	L66
+	pushl	%esi
+	pushl	$3932160
+	call	_memman_alloc_4k
+	pushl	%esi
+	movl	%eax, %ebx
+	pushl	%eax
+	pushl	%edi
+	call	_tek_decomp
+	pushl	-16(%ebp)
+	pushl	%edi
+	movl	%ebx, %edi
+	pushl	$3932160
+	call	_memman_free_4k
+	addl	$32, %esp
+	movl	12(%ebp), %eax
+	movl	%esi, (%eax)
+	jmp	L66
+	.def	_memman_free_4k;	.scl	2;	.type	32;	.endef
+	.def	_tek_decomp;	.scl	2;	.type	32;	.endef
+	.def	_tek_getsize;	.scl	2;	.type	32;	.endef
+	.def	_memman_alloc_4k;	.scl	2;	.type	32;	.endef

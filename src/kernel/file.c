@@ -61,7 +61,7 @@ void file_loadfile(int clustno, int size, char *buf, int *fat, char *img)
 struct FILEINFO *file_search(char *name, struct FILEINFO *finfo, int max)
 {
     int x, y;
-    char s[12];
+    unsigned char s[12];
     for (y = 0; y < 11; y++) {
 		s[y] = ' ';
 	}

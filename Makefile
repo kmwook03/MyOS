@@ -1,11 +1,12 @@
 # -- Path --
-TOOLPATH = tool
-INCPATH = tool/haribote
-OUT_DIR = out
-APP_OUT_DIR = out/app
+TOOLPATH = tools
+INCPATH = tools/haribote
+SRC_DIR = src
+BUILD_DIR = build
 IMG_DIR = img
+APP_DIR = app
 
-KOREAN_FONT = src/graphics/font/H04.FNT
+FONT_DIR = src/graphics/font
 
 # -- Tools --
 NASK = $(TOOLPATH)/nask
@@ -21,125 +22,123 @@ EDIMG = $(TOOLPATH)/edimg
 FDIMG2ISO = $(TOOLPATH)/makeiso/fdimg2iso
 GOLIB = $(TOOLPATH)/golib00
 
-QEMU = qemu-system-i386
+QEMU = qemu-system-x86_64
 
 COPY = cp
-DEL = rm -f
+DEL = rm -rf
+MKDIR = mkdir -p
 
-# -- Source Path --
-VPATH = src/kernel:src/boot:src/graphics/font:app/src:app/api
+# -- Srouce Discovery --
+KERNEL_SRCS = $(wildcard $(SRC_DIR)/kernel/*.c)
+DRIVERS_SRCS = $(wildcard $(SRC_DIR)/drivers/*.c)
+LIB_SRCS = $(wildcard $(SRC_DIR)/lib/*.c)
 
-# -- APP API --
-API_SRC = $(wildcard app/api/api*.nas) app/api/alloca.nas
-API_OBJS = $(patsubst app/api/%.nas, $(APP_OUT_DIR)/api/%.obj, $(API_SRC))
-API_LIB = $(APP_OUT_DIR)/api/apilib.lib
+KERNEL_OBJS = $(patsubst $(SRC_DIR)/kernel/%.c, $(BUILD_DIR)/kernel/%.obj, $(KERNEL_SRCS))
+DRIVERS_OBJS = $(patsubst $(SRC_DIR)/drivers/%.c, $(BUILD_DIR)/drivers/%.obj, $(DRIVERS_SRCS))
+LIB_OBJS = $(patsubst $(SRC_DIR)/lib/%.c, $(BUILD_DIR)/lib/%.obj, $(LIB_SRCS))
 
-# -- Application Targets --
-APP_SRC_C   = $(wildcard app/src/*.c)
-APP_TARGETS = $(patsubst app/src/%.c, $(APP_OUT_DIR)/%.hrb, $(APP_SRC_C))
+NASKFUNC_OBJ = $(BUILD_DIR)/kernel/naskfunc.obj
+FONT_OBJ = $(BUILD_DIR)/graphics/font/hankaku.obj
 
-# -- Kernel Objects --
-OBJS_BOOTPACK = $(OUT_DIR)/bootpack.obj $(OUT_DIR)/naskfunc.obj $(OUT_DIR)/hankaku.obj $(OUT_DIR)/graphic.obj $(OUT_DIR)/dsctbl.obj \
-				$(OUT_DIR)/int.obj $(OUT_DIR)/fifo.obj $(OUT_DIR)/keyboard.obj $(OUT_DIR)/mouse.obj $(OUT_DIR)/memory.obj $(OUT_DIR)/sheet.obj \
-				$(OUT_DIR)/timer.obj $(OUT_DIR)/mtask.obj $(OUT_DIR)/window.obj $(OUT_DIR)/console.obj $(OUT_DIR)/file.obj $(OUT_DIR)/tek.obj \
-				$(OUT_DIR)/hangul.obj
+ALL_OBJS = $(KERNEL_OBJS) $(DRIVERS_OBJS) $(LIB_OBJS) $(NASKFUNC_OBJ) $(FONT_OBJ)
 
+# -- Application Discovery --
+APP_DIRS = $(wildcard $(APP_DIR)/*/)
+APP_NAMES = $(notdir $(patsubst %/,%,$(APP_DIRS)))
+APPS = $(filter-out api include, $(APP_NAMES))
+
+API_LIB = $(BUILD_DIR)/app/api/apilib.lib
+APP_TARGETS = $(foreach app, $(APPS), $(BUILD_DIR)/app/$(app)/$(app).hrb)
 
 # -- Build Rule --
-default :
-	@mkdir -p $(OUT_DIR) $(APP_OUT_DIR)/api $(IMG_DIR)
-	$(MAKE) $(IMG_DIR)/haribote.img
+.PHONY : default clean run info
 
-# -- API Lib Build --
-$(API_LIB) : $(API_OBJS)
-	@mkdir -p $(APP_OUT_DIR)/api
-	$(GOLIB) $(API_OBJS) out:$@
+default : $(IMG_DIR)/haribote.img
 
-# -- Default Memory Size --
-STACK_DEFAULT = 1k
-MALLOC_DEFAULT = 0k
+# Bootloader Build
+$(BUILD_DIR)/boot/ipl.bin : $(SRC_DIR)/boot/ipl.nas
+	@$(MKDIR) $(BUILD_DIR)/boot
+	$(NASK) $< $@ $(subst .bin,.lst,$@)
 
-# -- APP Specific Memory Size --
-STACK_bball = 52k
-STACK_invader = 90k
-STACK_calc = 4k
-STACK_gview = 4480k
+$(BUILD_DIR)/boot/asmhead.bin : $(SRC_DIR)/boot/asmhead.nas
+	@$(MKDIR) $(BUILD_DIR)/boot
+	$(NASK) $< $@ $(subst .bin,.lst,$@)
 
-MALLOC_beepdown = 40k
-MALLOC_color = 56k
-MALLOC_invader = 48k
-MALLOC_timer = 40k
-MALLOC_walk = 48k
+# Kernel & Drivers Build (c -> obj)
+$(BUILD_DIR)/%.obj : $(SRC_DIR)/%.c
+	@$(MKDIR) $(dir $@)
+	$(CC1) -o $(basename $@).gas $<
+	$(GAS2NASK) $(basename $@).gas $(basename $@).nas
+	$(NASK) $(basename $@).nas $@ $(basename $@).lst
 
-# -- Application Build --
-$(APP_OUT_DIR)/%/%.gas : app/src/%.c
-	@mkdir -p $(APP_OUT_DIR)/$*
-	$(CC1) -o $@ $<
-
-$(APP_OUT_DIR)/%/%.nas : $(APP_OUT_DIR)/%/%.gas
-	$(GAS2NASK) $< $@
-
-$(APP_OUT_DIR)/%/%.obj : $(APP_OUT_DIR)/%/%.nas
-	$(NASK) $< $@ $(APP_OUT_DIR)/$*/$*.lst
-
-$(APP_OUT_DIR)/%/%.bim : $(APP_OUT_DIR)/%/%.obj $(API_LIB)
-	$(OBJ2BIM) @$(RULEFILE) out:$@ map:$(APP_OUT_DIR)/$*/$*.map stack:$(if $(STACK_$*),$(STACK_$*),$(STACK_DEFAULT)) $< $(API_LIB)
-
-$(APP_OUT_DIR)/%/%.org : $(APP_OUT_DIR)/%/%.bim
-	$(BIM2HRB) $< $@ $(if $(MALLOC_$*),$(MALLOC_$*),$(MALLOC_DEFAULT))
-
-$(APP_OUT_DIR)/%.hrb : $(APP_OUT_DIR)/%/%.org
-	$(BIM2BIN) -osacmp in:$< out:$@
-
-# -- Kernel Build --
-$(OUT_DIR)/bootpack.bim : $(OBJS_BOOTPACK)
-	$(OBJ2BIM) @$(RULEFILE) out:$@ stack:3136k map:$(subst .bim,.map,$@) $(OBJS_BOOTPACK)
-
-$(OUT_DIR)/bootpack.hrb : $(OUT_DIR)/bootpack.bim
-	$(BIM2HRB) $< $@ 0
-
-# -- Common Object Build --
-$(OUT_DIR)/%.obj: %.c
-	$(CC1) -o $(OUT_DIR)/$*.gas $<
-	$(GAS2NASK) $(OUT_DIR)/$*.gas $(OUT_DIR)/$*.nas
-	$(NASK) $(OUT_DIR)/$*.nas $@ $(OUT_DIR)/$*.lst
-
-$(OUT_DIR)/%.obj: %.nas
+# Naskfunc Build
+$(BUILD_DIR)/kernel/naskfunc.obj : $(SRC_DIR)/kernel/naskfunc.nas
+	@$(MKDIR) $(BUILD_DIR)/kernel
 	$(NASK) $< $@ $(subst .obj,.lst,$@)
 
-# -- Font Build --
-$(OUT_DIR)/hankaku.bin: src/graphics/font/hankaku.txt
+# Font Build
+$(BUILD_DIR)/graphics/font/hankaku.bin : $(SRC_DIR)/graphics/font/hankaku.txt
+	@$(MKDIR) $(BUILD_DIR)/graphics/font
 	$(MAKEFONT) $< $@
 
-$(OUT_DIR)/hankaku.obj: $(OUT_DIR)/hankaku.bin
+$(BUILD_DIR)/graphics/font/hankaku.obj : $(BUILD_DIR)/graphics/font/hankaku.bin
 	$(BIN2OBJ) $< $@ _hankaku
 
-# -- Boot Loader Build --
-$(OUT_DIR)/ipl.bin: src/boot/ipl.nas
-	$(NASK) $< $@ $(subst .bin,.lst,$@)
+# Kernel Linking (bim -> hrb)
+$(BUILD_DIR)/kernel/bootpack.bim : $(ALL_OBJS)
+	$(OBJ2BIM) @$(RULEFILE) out:$@ stack:3136k map:$(BUILD_DIR)/kernel/bootpack.map $(ALL_OBJS)
 
-$(OUT_DIR)/asmhead.bin: src/boot/asmhead.nas
-	$(NASK) $< $@ $(subst .bin,.lst,$@)
+$(BUILD_DIR)/kernel/bootpack.hrb : $(BUILD_DIR)/kernel/bootpack.bim
+	$(BIM2HRB) $< $@ 0
 
-# -- Image Build --
-$(IMG_DIR)/haribote.sys: $(OUT_DIR)/asmhead.bin $(OUT_DIR)/bootpack.hrb
+# System Link (asmhead + bootpack)
+$(BUILD_DIR)/haribote.sys : $(BUILD_DIR)/boot/asmhead.bin $(BUILD_DIR)/kernel/bootpack.hrb
 	cat $^ > $@
 
-$(IMG_DIR)/haribote.img: $(OUT_DIR)/ipl.bin $(IMG_DIR)/haribote.sys $(APP_TARGETS) $(KOREAN_FONT)
+# API Library Build
+API_SRCS = $(wildcard $(APP_DIR)/api/*.nas)
+API_OBJS = $(patsubst $(APP_DIR)/api/%.nas, $(BUILD_DIR)/app/api/%.obj, $(API_SRCS))
+
+$(BUILD_DIR)/app/api/%.obj : $(APP_DIR)/api/%.nas
+	@$(MKDIR) $(dir $@)
+	$(NASK) $< $@ $(subst .obj,.lst,$@)
+
+$(API_LIB) : $(API_OBJS)
+	@$(MKDIR) $(dir $@)
+	$(GOLIB) $(API_OBJS) out:$@
+
+# Application Build
+.PHONY : $(APPS)
+
+$(APP_TARGETS) : $(API_LIB)
+	@mkdir -p $(dir $@)
+	$(MAKE) -C app/$(notdir $(patsubst %/,%,$(dir $@)))
+	
+# Image Creation
+$(IMG_DIR)/haribote.img : $(BUILD_DIR)/boot/ipl.bin $(BUILD_DIR)/haribote.sys $(APP_TARGETS)
+	@$(MKDIR) $(IMG_DIR)
 	$(EDIMG) imgin:$(TOOLPATH)/fdimg0at.tek \
-		wbinimg src:$(OUT_DIR)/ipl.bin len:512 from:0 to:0 \
-		copy from:$(IMG_DIR)/haribote.sys to:@: \
-		copy from:$(KOREAN_FONT) to:@: \
+		wbinimg src:$(BUILD_DIR)/boot/ipl.bin len:512 from:0 to:0 \
+		copy from:$(BUILD_DIR)/haribote.sys to:@: \
 		$(foreach app, $(APP_TARGETS), copy from:$(app) to:@: ) \
-		copy from:text.txt to:@: \
-		copy from:sanjini.jpg to:@: \
+		copy from:$(FONT_DIR)/E2.FNT to:@: \
+		copy from:$(FONT_DIR)/H04.FNT to:@: \
+		copy from:날개.txt to:@: \
+		copy from:src/lib/utf8.c to:@: \
 		imgout:$@
+
+# Commands
+run: $(IMG_DIR)/haribote.img
+	$(QEMU) -fda $(IMG_DIR)/haribote.img -no-reboot -d int
+
+clean:
+	$(DEL) $(BUILD_DIR) $(IMG_DIR)
 
 iso : $(IMG_DIR)/haribote.img
 	$(FDIMG2ISO) $(TOOLPATH)/makeiso/fdimg2iso.dat $(IMG_DIR)/haribote.img $(IMG_DIR)/haribote.iso
 
-run: $(IMG_DIR)/haribote.img
-	$(QEMU) -m 128M -drive format=raw,if=floppy,file=$(IMG_DIR)/haribote.img -no-reboot -d int
-
-clean :
-	rm -rf $(OUT_DIR) $(IMG_DIR)
+info:
+	@echo "[Kernel Sources] $(KERNEL_SRCS)"
+	@echo "[Driver Sources] $(DRIVERS_SRCS)"
+	@echo "[Library Sources] $(LIB_SRCS)"
+	@echo "[APPS] $(APPS)"

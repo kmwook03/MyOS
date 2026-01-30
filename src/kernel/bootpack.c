@@ -1,6 +1,8 @@
 // bootpack.c
 
 #include "../include/bootpack.h"
+#include "../include/utf8.h"
+#include "../include/hangul.h"
 #include <stdio.h>
 
 #define KEYCMD_LED		0xed
@@ -93,7 +95,7 @@ void HariMain(void)
 	fifo.task = task_a;														// FIFO 버퍼에 메인 태스크 설정
     task_run(task_a, 1, 2);													// 메인 태스크 실행
 	*((int *) 0x0fe4) = (int) shtctl;										// shtctl 주소 저장 (0x0fe4)
-	task_a->langmode = 0;													// 메인 태스크는 영어 모드로 시작
+	task_a->langmode = 1;													// 메인 태스크는 영어 모드로 시작
 
     // 배경 시트 그리기
 	sht_back  = sheet_alloc(shtctl);														// 배경 시트 할당
@@ -101,9 +103,42 @@ void HariMain(void)
     sheet_setbuf(sht_back, buf_back, binfo->scrnx, binfo->scrny, -1);						// 배경 시트 버퍼 설정
     init_screen8(buf_back, binfo->scrnx, binfo->scrny);                                     // 배경 화면 초기화
 
+	// 폰트 설정
+	int *fat, size_k = 0;
+	unsigned char *korean;
+	struct FILEINFO *finfo_e, *finfo_k;
+	extern char hankaku[4096];
+	
+	fat = (int *) memman_alloc_4k(memman, 4 * 2880); 										// FAT 테이블용 메모리 할당
+	file_readfat(fat, (unsigned char *) (ADR_DISKIMG + 0x000200));							// FAT 테이블 읽기
+	finfo_e = file_search("E2      FNT", (struct FILEINFO *) (ADR_DISKIMG + 0x002600), 224);		// 영문 폰트 파일 검색
+	finfo_k = file_search("H04     FNT", (struct FILEINFO *) (ADR_DISKIMG + 0x002600), 224);		// 한글 폰트 파일 검색
+
+	if (finfo_k != 0) {
+		size_k = finfo_k->size;
+	}
+
+	korean = (unsigned char *) memman_alloc_4k(memman, 4096 + size_k);						// 한글 폰트용 메모리 할당
+	if (finfo_e != 0) {
+		file_loadfile(finfo_e->clustno, finfo_e->size, korean, fat, (unsigned char *) (ADR_DISKIMG + 0x003e00));
+	} else {
+		for (i=0; i<4096; i++) {
+			korean[i] = hankaku[i];
+		}
+	}
+	if (finfo_k != 0) {
+		file_loadfile(finfo_k->clustno, finfo_k->size, korean + 4096, fat, (unsigned char *) (ADR_DISKIMG + 0x003e00));
+	} else {
+        for (i = 0; i < size_k; i++) {
+            *(korean + 4096 + i) = 0;
+        }
+    }
+	system_font = korean;
+	*((int *) 0x0fe8) = (int) (korean + 4096);													// 한글 폰트 주소 저장 (0x0fe8)
+	memman_free_4k(memman, (int) fat, 4*2880);
 
     // 콘솔 시트 그리기
-	key_win = open_console(shtctl, memtotal);												// 첫 번째 콘솔 창 열기
+	key_win = open_console(shtctl, memtotal, 1);												// 첫 번째 콘솔 창 열기
 
     // 마우스 시트 그리기
 	sht_mouse = sheet_alloc(shtctl);
@@ -128,25 +163,7 @@ void HariMain(void)
 	fifo32_put(&keycmd, KEYCMD_LED);										// 키보드 LED 명령
 	fifo32_put(&keycmd, key_leds);											// 현재 LED 상태 전송
 
-	int *fat;
-	unsigned char *korean;
-	struct FILEINFO *finfo;
-	extern char hankaku[4096];
-	
-	korean = (unsigned char *) memman_alloc_4k(memman, 12*1024);							// 한글 폰트용 메모리 할당 (12KB)
-	fat = (int *) memman_alloc_4k(memman, 4 * 2880); 										// FAT 테이블용 메모리 할당
-	file_readfat(fat, (unsigned char *) (ADR_DISKIMG + 0x000200));							// FAT 테이블 읽기
-	finfo = file_search("H04     FNT", (struct FILEINFO *) (ADR_DISKIMG + 0x002600), 224);		// 한글 폰트 파일 검색
-
-	if (finfo != 0) {
-		file_loadfile(finfo->clustno, finfo->size, korean, fat, (char *) (ADR_DISKIMG + 0x003e00));
-	} else {
-		for (i=0; i<4096; i++) {
-			korean[i] = hankaku[i];	
-		}
-	}
-	*((int *) 0x0fe8) = (int) korean;														// 한글 폰트 주소 저장 (0x0fe8)
-	memman_free_4k(memman, (int) fat, 4*2880);
+	putfonts_sht(sht_back,  8,  8, COL8_FFFFFF, COL8_008484, "머꼬 OS v1.0", 12);
 
 	// 메인 루프
 	for (;;) {
@@ -260,7 +277,7 @@ void HariMain(void)
 				if (i == 256 + 0x2e && key_ctrl != 0 && key_win != 0) { // Ctrl + C 눌림
 					task = key_win->task;
 					if (task != 0 && task->tss.ss0 != 0) {
-						cons_putstr0(task->cons, "\nBreak(key) :\n");
+						cons_putstr(task->cons, "\nBreak(key) :\n");
 						io_cli(); // CPU 인터럽트 비활성화
 						task->tss.eax = (int) &(task->tss.esp0);
 						task->tss.eip = (int) asm_end_app;
@@ -272,7 +289,7 @@ void HariMain(void)
 					if (key_win != 0) {
 						keywin_off(key_win);
 					}
-					key_win = open_console(shtctl, memtotal);
+					key_win = open_console(shtctl, memtotal, 1);
 					sheet_slide(key_win, 32, 4);
 					sheet_updown(key_win, shtctl->top);
 					keywin_on(key_win);
@@ -323,7 +340,7 @@ void HariMain(void)
 											// 닫기 버튼 클릭
 											if ((sht->flags & 0x10) != 0) { // 앱 윈도우일 경우
 												task = sht->task;
-												cons_putstr0(task->cons, "\nBreak(mouse) :\n");
+												cons_putstr(task->cons, "\nBreak(mouse) :\n");
 												io_cli(); // CPU 인터럽트 비활성화
 												task->tss.eax = (int) &(task->tss.esp0);
 												task->tss.eip = (int) asm_end_app;
@@ -406,15 +423,16 @@ void keywin_on(struct SHEET *key_win)
  * 
  * @param sht: 콘솔 시트 포인터
  * @param memtotal: 총 메모리 크기
+ * @param langmode: 언어 모드 (0: 영어, 1: 한글)
  * @return struct TASK*: 생성된 콘솔 태스크 포인터
  */
-struct TASK *open_constask(struct SHEET *sht, unsigned int memtotal)
+struct TASK *open_constask(struct SHEET *sht, unsigned int memtotal, int langmode)
 {
 	struct MEMMAN *memman = (struct MEMMAN *) MEMMAN_ADDR;
 	struct TASK *task = task_alloc();
 	int *cons_fifo = (int *) memman_alloc_4k(memman, 128 * 4);					// 콘솔 FIFO 버퍼 할당
 	task->cons_stack = memman_alloc_4k(memman, 64 * 1024);               		// 콘솔 스택 할당
-	task->tss.esp = task->cons_stack + 64 * 1024 - 12;
+	task->tss.esp = task->cons_stack + 64 * 1024 - 16;
 	task->tss.eip = (int) &console_task;
 	task->tss.es = 1 * 8;
 	task->tss.cs = 2 * 8;
@@ -424,6 +442,7 @@ struct TASK *open_constask(struct SHEET *sht, unsigned int memtotal)
 	task->tss.gs = 1 * 8;
 	*((int *) (task->tss.esp + 4)) = (int) sht;									// argument: sht
 	*((int *) (task->tss.esp + 8)) = memtotal;                                  // argument: memtotal
+	*((int *) (task->tss.esp + 12)) = langmode;                                // argument: langmode
 	task_run(task, 2, 2);														// 콘솔 태스크 실행
 	fifo32_init(&task->fifo, 128, cons_fifo, task);                 			// 콘솔 FIFO 버퍼 초기화
 	return task;
@@ -436,16 +455,17 @@ struct TASK *open_constask(struct SHEET *sht, unsigned int memtotal)
  * @param memtotal: 총 메모리 크기
  * @return struct SHEET*: 생성된 콘솔 시트 포인터
  */
-struct SHEET *open_console(struct SHTCTL *shtctl, unsigned int memtotal)
+struct SHEET *open_console(struct SHTCTL *shtctl, unsigned int memtotal, int langmode)
 {
 	struct MEMMAN *memman = (struct MEMMAN *) MEMMAN_ADDR;
 	struct SHEET *sht = sheet_alloc(shtctl);
-	unsigned char *buf = (unsigned char *) memman_alloc_4k(memman, CONSOLE_WIDTH * CONSOLE_HEIGHT);				// 콘솔 버퍼 할당
-	sheet_setbuf(sht, buf, CONSOLE_WIDTH, CONSOLE_HEIGHT, -1);													// 콘솔 시트 버퍼 설정
-	make_window8(buf, CONSOLE_WIDTH, CONSOLE_HEIGHT, "console", 0);                                  			// 콘솔 윈도우 그리기
-	make_textbox8(sht, 8, 28, CONSOLE_TBOX_WIDTH, CONSOLE_TBOX_HEIGHT, COL8_000000);                            // 텍스트박스 영역 그리기
-	sht->task = open_constask(sht, memtotal);                                   								// 시트에 태스크 포인터 저장
-	sht->flags |= 0x20;                                                         								// 커서 있음
+	unsigned char *buf = (unsigned char *) memman_alloc_4k(memman, CONSOLE_WIDTH * CONSOLE_HEIGHT);						// 콘솔 버퍼 할당
+	char *title = "콘솔";
+	sheet_setbuf(sht, buf, CONSOLE_WIDTH, CONSOLE_HEIGHT, -1);															// 콘솔 시트 버퍼 설정
+	make_window8(buf, CONSOLE_WIDTH, CONSOLE_HEIGHT, title, 0);                                  						// 콘솔 윈도우 그리기
+	make_textbox8(sht, 8, 28, CONSOLE_TBOX_WIDTH, CONSOLE_TBOX_HEIGHT, COL8_000000);                            		// 텍스트박스 영역 그리기
+	sht->task = open_constask(sht, memtotal, langmode);                                   								// 시트에 태스크 포인터 저장
+	sht->flags |= 0x20;                                                         										// 커서 있음
 	return sht;
 }
 
@@ -473,7 +493,7 @@ void close_console(struct SHEET *sht)
 {
 	struct MEMMAN *memman = (struct MEMMAN *) MEMMAN_ADDR;
 	struct TASK *task = sht->task;
-	memman_free_4k(memman, (int) sht->buf, 256 * 165);
+	memman_free_4k(memman, (int) sht->buf, CONSOLE_WIDTH * CONSOLE_HEIGHT);
 	sheet_free(sht);
 	close_constask(task);
 	return;

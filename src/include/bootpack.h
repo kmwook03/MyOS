@@ -43,6 +43,9 @@ struct FIFO32 {
     struct TASK *task;
 };
 
+extern char hankaku[4096];
+extern unsigned char *system_font;
+
 void fifo32_init(struct FIFO32 *fifo, int size, int *buf, struct TASK *task);
 int fifo32_put(struct FIFO32 *fifo, int data);
 int fifo32_get(struct FIFO32 *fifo);
@@ -55,9 +58,12 @@ void boxfill8(unsigned char *vram, int xsize, unsigned char c, int x0, int y0, i
 void init_screen8(char *vram, int x, int y);
 void putfont8(char *vram, int xsize, int x, int y, char c, char *font);
 void putfonts8_asc(char *vram, int xsize, int x, int y, char c, unsigned char *s);
+void putfont16(char *vram, int xsize, int x, int y, char c, unsigned char *s);
 void init_mouse_cursor8(char *mouse, char bc);
 void putblock8_8(char *vram, int vxsize, int pxsize,
                  int pysize, int px0, int py0, char *buf, int bxsize);
+void putfont(char *vram, int xsize, int x, int y, char color, unsigned char *s, int len);
+void putfonts(char *vram, int xsize, int x, int y, char c, unsigned char *s);
 
 // color constants
 #define COL8_000000    0  // black
@@ -145,16 +151,16 @@ void enable_mouse(struct FIFO32 *fifo, int data0, struct MOUSE_DEC *mdec);
 int mouse_decode(struct MOUSE_DEC *mdec, unsigned char dat);
 
 // memory.c
-#define MEMMAN_FREES  4090  // max number of free memory blocks
-#define MEMMAN_ADDR   0x003c0000
+#define MEMMAN_FREES  4090       // 빈 공간 블록 최대 개수
+#define MEMMAN_ADDR   0x003c0000 // 메모리 관리자 구조체 주소
 
-struct FREEINFO {   // information of free memory block
+struct FREEINFO {                // 빈 공간 블록 정보 구조체
     unsigned int addr, size;
 };
 
 struct MEMMAN {
     int frees, maxfrees, lostsize, losts;
-    struct FREEINFO free[MEMMAN_FREES];
+    struct FREEINFO free[MEMMAN_FREES];     // 빈 공간 리스트
 };
 
 unsigned int memtest(unsigned int start, unsigned int end);
@@ -168,17 +174,17 @@ int memman_free_4k(struct MEMMAN *man, unsigned int addr, unsigned int size);
 // sheet.c
 #define MAX_SHEETS  256
 struct SHEET {
-    unsigned char *buf;
-    int bxsize, bysize, vx0, vy0, col_inv, height, flags;
-    struct SHTCTL *ctl;
-    struct TASK *task;
+    unsigned char *buf;                                     // VRAM에 써질 시트 데이터 버퍼
+    int bxsize, bysize, vx0, vy0, col_inv, height, flags;   // 시트 크기, 화면 위치, 투명색, 높이, 플래그
+    struct SHTCTL *ctl;                                     // 시트 컨트롤러 포인터
+    struct TASK *task;                                      // 시트와 관련된 태스크 포인터
 };
 
 struct SHTCTL {
     unsigned char *vram, *map;
     int xsize, ysize, top;
-    struct SHEET *sheets[MAX_SHEETS]; // pointers to the sheets in display order
-    struct SHEET sheets0[MAX_SHEETS]; // actual sheets
+    struct SHEET *sheets[MAX_SHEETS]; // 디스플레이 순서대로 정렬된 시트 포인터 배열
+    struct SHEET sheets0[MAX_SHEETS]; // 실제 시트 구조체 배열
 };
 
 struct SHTCTL *shtctl_init(struct MEMMAN *memman, unsigned char *vram, int xsize, int ysize);
@@ -220,6 +226,12 @@ void inthandler20(int *esp);
 #define MAX_TASKS_LV  100   // max number of tasks per level
 #define MAX_TASKLEVELS  10  // max number of task levels
 
+struct HANGUL {
+    int state;
+    int cho, jung, jong;
+    char buf[4];
+};
+
 struct TSS32 {              // Task State Segment
 	int backlink, esp0, ss0, esp1, ss1, esp2, ss2, cr3;
 	int eip, eflags, eax, ecx, edx, ebx, esp, ebp, esi, edi;
@@ -228,19 +240,18 @@ struct TSS32 {              // Task State Segment
 };
 
 struct TASK {
-    int sel, flags;                     // selector(number of GDT) and status
-    int level, priority;                // level and priority
-    struct FIFO32 fifo;                 // FIFO for task
-    struct TSS32 tss;                   // task state segment
-    struct SEGMENT_DESCRIPTOR ldt[2];   // local descriptor table
-    struct CONSOLE *cons;               // console associated with this task
-    int ds_base, cons_stack;            // data segment base address
-    struct FILEHANDLE *fhandle;         // file handle
-    int *fat;                           // file allocation table
-    char *cmdline;                      // command line
-    char langmode;                      // language mode (0: English, 1: Korean)
-    char hangul_state;
-    char hangul_idx[3];
+    int sel, flags;                     // GDT 번호 셀렉터, 태스크 상태 플래그
+    int level, priority;                // 레벨, 우선순위
+    struct FIFO32 fifo;                 // 태스크용 FIFO
+    struct TSS32 tss;                   // 태스크 상태 세그먼트
+    struct SEGMENT_DESCRIPTOR ldt[2];   // LDT
+    struct CONSOLE *cons;               // 태스크와 관련된 콘솔
+    int ds_base, cons_stack;            // 데이터 세그먼트 베이스 주소
+    struct FILEHANDLE *fhandle;         // 파일 핸들
+    int *fat;                           // 파일 할당 테이블
+    char *cmdline;                      // 명령어 버퍼
+    char langmode;                      // 언어 모드 (0: 영어, 1: 한국어)
+    struct HANGUL hangul;               // 한글 오토마타 상태
 };
 
 struct TASKLEVEL {
@@ -270,11 +281,13 @@ void make_wtitle8(unsigned char *buf, int xsize, char *title, char act);
 void change_wtitle8(struct SHEET *sht, char act);
 void putfonts8_asc_sht(struct SHEET *sht, int x, int y, int c, int b, char *s, int l);
 void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c);
+void putfonts_sht(struct SHEET *sht, int x, int y, int c, int b, char *s, int l);
 
 // console.c
 struct CONSOLE {
     struct SHEET *sht;
     int cur_x, cur_y, cur_c, cur_width;
+    int cmd_pos;
     struct TIMER *timer;
 };
 struct FILEHANDLE {
@@ -282,8 +295,9 @@ struct FILEHANDLE {
     int size;
     int pos;
 };
-void console_task(struct SHEET *sht, int memtotal);
+void console_task(struct SHEET *sht, int memtotal, int langmode);
 void cons_putchar(struct CONSOLE *cons, int chr, char move);
+void cons_put_utf8(struct CONSOLE *cons, char *s, int len, char move);
 void cons_putstr0 (struct CONSOLE *cons, char *s);
 void cons_putstr1(struct CONSOLE *cons, char *s, int l);
 void cons_newline(struct CONSOLE *cons);
@@ -292,8 +306,8 @@ void cmd_mem(struct CONSOLE *cons, int memtotal);
 void cmd_cls(struct CONSOLE *cons);
 void cmd_dir(struct CONSOLE *cons);
 void cmd_exit(struct CONSOLE *cons, int *fat);
-void cmd_start(struct CONSOLE *cons, char *cmdline, int memtotal);
-void cmd_ncst(struct CONSOLE *cons, char *cmdline, int memtotal);
+void cmd_start(struct CONSOLE *cons, char *cmdline, int memtotal, int langmode);
+void cmd_ncst(struct CONSOLE *cons, char *cmdline, int memtotal, int langmode);
 void cmd_langmode(struct CONSOLE *cons, char *cmdline);
 void hrb_api_linewin(struct SHEET *sht, int x0, int y0, int x1, int y1, int col);
 int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline);
@@ -324,18 +338,5 @@ int tek_getsize(unsigned char *p);
 int tek_decomp(unsigned char *p, char *q, int size);
 
 // bootpack.c
-struct TASK *open_constask(struct SHEET *sht, unsigned int memtotal);
-struct SHEET *open_console(struct SHTCTL *shtctl, unsigned int memtotal);
-
-// hangul.c
-void put_johab(struct SHEET *sht, int x, int y, char color, unsigned char *font, unsigned short code);
-unsigned short utf8_to_johab(unsigned char *s);
-void putstr_utf8(struct SHEET *sht, int x, int y, char color, unsigned char *s);
-int key2cho(char c);
-int key2jung(char c);
-int key2jong(char c);
-void unicode_to_utf8(unsigned short val, char *dest);
-void draw_composing_char(struct CONSOLE *cons, int x, int y, int cho, int jung, int jong);
-void hangul_automata(struct CONSOLE *cons, struct TASK *task, int key);
-int hangul_automata_delete(struct CONSOLE *cons, struct TASK *task);
-void initialize_hangul(struct TASK *task);
+struct TASK *open_constask(struct SHEET *sht, unsigned int memtotal, int langmode);
+struct SHEET *open_console(struct SHTCTL *shtctl, unsigned int memtotal, int langmode);

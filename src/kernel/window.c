@@ -56,7 +56,8 @@ void make_wtitle8(unsigned char *buf, int xsize, char *title, char act)
 	};
 	int x, y;
 	char c, tc, tbc;
-    if (act != 0) {
+	
+	if (act != 0) {
         tc = COL8_FFFFFF;
         tbc = COL8_000084;
     } else {
@@ -66,7 +67,8 @@ void make_wtitle8(unsigned char *buf, int xsize, char *title, char act)
 
 	// TODO: 제목에 한글도 적을 수 있도록 해야함.
     boxfill8(buf, xsize, tbc, 3, 3, xsize - 4, 20);
-    putfonts8_asc(buf, xsize, 24, 4, tc, title);
+	putstr_utf8(buf, xsize, 24, 4, tc, (unsigned char *)title);
+    
 	for (y = 0; y < 14; y++) {
 		for (x = 0; x < 16; x++) {
 			c = closebtn[y][x];
@@ -138,6 +140,14 @@ void putfonts8_asc_sht(struct SHEET *sht, int x, int y, int c, int b, char *s, i
 {
 	boxfill8(sht->buf, sht->bxsize, b, x, y, x + l * 8 - 1, y + 15);
 	putfonts8_asc(sht->buf, sht->bxsize, x, y, c, s);
+	sheet_refresh(sht, x, y, x + l * 8, y + 16);
+	return;
+}
+
+void putfonts_sht(struct SHEET *sht, int x, int y, int c, int b, char *s, int l)
+{
+	boxfill8(sht->buf, sht->bxsize, b, x, y, x + l * 8 - 1, y + 15);
+	putfonts(sht->buf, sht->bxsize, x, y, c, s);
 	sheet_refresh(sht, x, y, x + l * 8, y + 16);
 	return;
 }

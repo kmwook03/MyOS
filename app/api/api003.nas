@@ -3,11 +3,11 @@
 [BITS 32]
 [FILE "api003.nas"]
 
-    GLOBAL  _api_putstr1
+    GLOBAL  _api_putstr_len
 
 [SECTION .text]
 
-_api_putstr1:	; void api_putstr1(char *s, int l);
+_api_putstr_len:	; void api_putstr_len(char *s, int l);
 	PUSH	EBX
 	MOV		EDX,3
 	MOV		EBX,[ESP+ 8]	; s

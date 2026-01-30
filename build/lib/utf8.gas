@@ -1,0 +1,117 @@
+	.file	"utf8.c"
+	.text
+	.balign 2
+.globl _utf8_byte_len
+	.def	_utf8_byte_len;	.scl	2;	.type	32;	.endef
+_utf8_byte_len:
+	pushl	%ebp
+	movl	$1, %ecx
+	movl	%esp, %ebp
+	movb	8(%ebp), %dl
+	testb	%dl, %dl
+	jns	L1
+	movb	%dl, %al
+	movl	$2, %ecx
+	andl	$-32, %eax
+	cmpb	$-64, %al
+	je	L1
+	movb	%dl, %al
+	movl	$3, %ecx
+	andl	$-16, %eax
+	cmpb	$-32, %al
+	je	L1
+	andl	$-8, %edx
+	xorl	%ecx, %ecx
+	cmpb	$-16, %dl
+	sete	%cl
+	sall	$2, %ecx
+L1:
+	movl	%ecx, %eax
+	popl	%ebp
+	ret
+	.balign 2
+.globl _utf8_to_unicode
+	.def	_utf8_to_unicode;	.scl	2;	.type	32;	.endef
+_utf8_to_unicode:
+	pushl	%ebp
+	movl	%esp, %ebp
+	pushl	%esi
+	pushl	%ebx
+	movl	8(%ebp), %ebx
+	movl	12(%ebp), %esi
+	movzbl	(%ebx), %eax
+	pushl	%eax
+	call	_utf8_byte_len
+	popl	%edx
+	cmpl	$2, %eax
+	je	L9
+	cmpl	$2, %eax
+	jg	L14
+	decl	%eax
+	je	L8
+L12:
+	xorl	%edx, %edx
+L15:
+	movl	$1, (%esi)
+L7:
+	leal	-8(%ebp), %esp
+	movl	%edx, %eax
+	popl	%ebx
+	popl	%esi
+	popl	%ebp
+	ret
+L8:
+	movzbl	(%ebx), %edx
+	jmp	L15
+L14:
+	cmpl	$3, %eax
+	je	L10
+	cmpl	$4, %eax
+	jne	L12
+	movb	(%ebx), %al
+	andl	$7, %eax
+	movzbl	%al, %edx
+	sall	$18, %edx
+	movb	1(%ebx), %al
+	andl	$63, %eax
+	movzbl	%al, %eax
+	sall	$12, %eax
+	orl	%eax, %edx
+	movb	2(%ebx), %al
+	andl	$63, %eax
+	movzbl	%al, %eax
+	sall	$6, %eax
+	orl	%eax, %edx
+	movb	3(%ebx), %al
+	andl	$63, %eax
+	movl	$4, (%esi)
+	movzbl	%al, %eax
+	orl	%eax, %edx
+	jmp	L7
+L10:
+	movb	(%ebx), %al
+	andl	$15, %eax
+	movzbl	%al, %edx
+	sall	$12, %edx
+	movb	1(%ebx), %al
+	andl	$63, %eax
+	movzbl	%al, %eax
+	sall	$6, %eax
+	orl	%eax, %edx
+	movb	2(%ebx), %al
+	andl	$63, %eax
+	movl	$3, (%esi)
+	movzbl	%al, %eax
+	orl	%eax, %edx
+	jmp	L7
+L9:
+	movb	(%ebx), %al
+	andl	$31, %eax
+	movzbl	%al, %edx
+	sall	$6, %edx
+	movb	1(%ebx), %al
+	andl	$63, %eax
+	movl	$2, (%esi)
+	movzbl	%al, %eax
+	orl	%eax, %edx
+	jmp	L7

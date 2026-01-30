@@ -94,6 +94,8 @@ unsigned int memman_total(struct MEMMAN *man)
 /**
  * @brief 메모리 할당 함수
  * 
+ * 최초 적합(First Fit) 정책에 따라 가장 먼저 발견된 충분히 큰 빈 공간을 할당
+ * 
  * @param man: 메모리 관리자 구조체 포인터
  * @param size: 할당할 메모리 크기 (바이트 단위)
  * @return: 할당된 메모리의 시작 주소, 할당 실패 시 0 반환
@@ -101,21 +103,21 @@ unsigned int memman_total(struct MEMMAN *man)
 unsigned int memman_alloc(struct MEMMAN *man, unsigned int size)
 {
     unsigned int i, a;
-    for (i=0; i<man->frees; i++) {
-        if (man->free[i].size >= size) {
-            a = man->free[i].addr;
-            man->free[i].addr += size;
-            man->free[i].size -= size;
-            if (man->free[i].size == 0) {
-                man->frees--;
-                for (; i<man->frees; i++) {
+    for (i=0; i<man->frees; i++) {              // 모든 빈 공간 탐색
+        if (man->free[i].size >= size) {        // 할당 가능한 블록이면?
+            a = man->free[i].addr;              // 할당할 메모리의 시작 주소
+            man->free[i].addr += size;          // 빈 공간의 시작 주소가 할당된 만큼 뒤로 이동
+            man->free[i].size -= size;          // 빈 공간의 크기가 할당된 만큼 줄어든다
+            if (man->free[i].size == 0) {       // 빈 공간이 없어졌으면
+                man->frees--;                   // 빈 공간 목록에서 제거
+                for (; i<man->frees; i++) {     // 제거된 뒤의 빈 공간을 앞으로 당김
                     man->free[i] = man->free[i+1];
                 }
             }
-            return a;
+            return a;                           // 할당된 메모리의 시작 주소 반환
         }
     }
-    return 0; // cannot allocate
+    return 0; // 할당 실패
 }
 
 /**
