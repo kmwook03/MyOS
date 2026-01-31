@@ -10,11 +10,11 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 CMakeUserPresets.json
-tool/
+# tool/
 img/
 vm/
 tolset/
-out/
+build/
 *.iso
 graphics/
 Makefile.orig

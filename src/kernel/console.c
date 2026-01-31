@@ -121,7 +121,7 @@ void console_task(struct SHEET *sht, int memtotal, int langmode)
 					cmdline[cons.cmd_pos] = 0;            // 명령어 라인 종료 문자
                     cons.cmd_pos = 0;
 
-                    cons_debug(&cons, cmdline);    // 디버그용
+                    // cons_debug(&cons, cmdline);    // 디버그용
                     
                     cons_newline(&cons);                        // 줄바꿈
                     cons_runcmd(cmdline, &cons, fat, memtotal); // 명령어 실행
