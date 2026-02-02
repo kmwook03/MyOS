@@ -16,7 +16,6 @@ vm/
 tolset/
 build/
 *.iso
-graphics/
 Makefile.orig
 .jpg
 .txt
