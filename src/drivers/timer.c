@@ -1,5 +1,4 @@
 // CPU timer management
-
 #include "../include/bootpack.h"
 
 #define PIT_CTRL    0x0043

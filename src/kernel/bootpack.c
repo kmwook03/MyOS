@@ -2,7 +2,6 @@
 
 #include "../include/bootpack.h"
 #include "../include/utf8.h"
-#include "../include/hangul.h"
 #include <stdio.h>
 
 #define KEYCMD_LED		0xed
@@ -163,7 +162,7 @@ void HariMain(void)
 	fifo32_put(&keycmd, KEYCMD_LED);										// 키보드 LED 명령
 	fifo32_put(&keycmd, key_leds);											// 현재 LED 상태 전송
 
-	putfonts_sht(sht_back,  8,  8, COL8_FFFFFF, COL8_008484, "하리보테-한글", 11);
+	putfonts_sht(sht_back,  8,  8, COL8_FFFFFF, COL8_008484, "머꼬 OS v1.0", 12);
 
 	// 메인 루프
 	for (;;) {

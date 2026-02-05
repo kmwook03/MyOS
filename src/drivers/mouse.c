@@ -1,5 +1,4 @@
 // mouse controller implementation
-
 #include "../include/bootpack.h"
 
 struct FIFO32 *mousefifo;

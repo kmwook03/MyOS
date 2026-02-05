@@ -104,7 +104,7 @@ next:
  * @param fat: FAT 테이블 포인터
  * @return char*: 파일 데이터를 저장한 버퍼 포인터
  */
-char *file_loadfile2(int clustno, int *psize, int *fat)
+char *file_loadfile_check_tek(int clustno, int *psize, int *fat)
 {
 	int size = *psize, size2;
 	struct MEMMAN *memman = (struct MEMMAN *) MEMMAN_ADDR;

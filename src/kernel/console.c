@@ -2,7 +2,6 @@
 
 #include "../include/bootpack.h"
 #include "../include/utf8.h"
-#include "../include/hangul.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -587,7 +586,7 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
 
     if (finfo != 0) {
         appsiz = finfo->size;
-        p = file_loadfile2(finfo->clustno, &appsiz, fat);
+        p = file_loadfile_check_tek(finfo->clustno, &appsiz, fat);
         if (appsiz >= 36 && strncmp(p + 4, "Hari", 4) == 0 && *p == 0x00) {
             segsiz = *((int *) (p + 0x0000));
             esp    = *((int *) (p + 0x000c));
@@ -787,7 +786,7 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
                 reg[7] = (int) fh;
                 fh->size = finfo->size;
                 fh->pos = 0;
-                fh->buf = file_loadfile2(finfo->clustno, &fh->size, task->fat);
+                fh->buf = file_loadfile_check_tek(finfo->clustno, &fh->size, task->fat);
             }
         }
     } else if (edx == 22) {

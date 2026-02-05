@@ -1,5 +1,4 @@
 // keyboard controller implementation
-
 #include "../include/bootpack.h"
 
 struct FIFO32 *keyfifo;
