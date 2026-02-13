@@ -213,7 +213,7 @@ static int fdc_cmd(const unsigned char* cmd, const int length)
 {
     //sysPrints("[FDC] cmd busy check.\n");
     if (!fdc_wait_msrStatus(MSR_BUSY, MSR_READY)) {
-        sysPrints("[FDC] cmd busy check error.\n");
+        sysPrints("[FDC] CMD가 바쁩니다.\n");
         return 0;
     }
     //sysPrints("[FDC] cmd busy check [OK]\n");
@@ -222,7 +222,7 @@ static int fdc_cmd(const unsigned char* cmd, const int length)
     int i;
     for (i = 0; i < length; ++i) {
         if (!fdc_wait_msrStatus(MSR_RQM | MSR_DIO, MSR_RQM)) {
-            sysPrints("[FDC] msr RQM|DIO error\n");
+            sysPrints("[FDC] msr RQM|DIO 오류\n");
             return 0;
         }
         io_out8(FDC_DAT, cmd[i]);
@@ -237,7 +237,7 @@ static int fdc_read_results()
     fdc_results.status_count = 0;
 
     if (fdc_wait_msrStatus(MSR_RQM | MSR_DIO, MSR_RQM | MSR_DIO) < 0) {
-        sysPrints("fdc result phase error 1\n");
+        sysPrints("fdc 결과 단계 오류 1\n");
         return 0;
     }
 
@@ -249,7 +249,7 @@ static int fdc_read_results()
 
         int status = fdc_wait_msrStatus(MSR_RQM, MSR_RQM);
         if (status < 0) {
-            sysPrints("fdc result phase error 2\n");
+            sysPrints("fdc 결과 단계 오류 2\n");
             return 0;
         }
         if (!(status & MSR_DIO))
@@ -263,7 +263,7 @@ static int fdc_sense_interrupt()
 
     fdc_clear_interrupt();
     if (fdc_cmd(cmd, sizeof(cmd)) != 1) {
-        sysPrints("[FDC] sense interrupt status cmd error\n");
+        sysPrints("[FDC] sense 인터럽트 상태 명령 오류\n");
         return 0;
     }
     fdc_read_results();
@@ -288,19 +288,19 @@ static int fdc_recalibrate()
 
     //sysPrints("[FDC] Recalibrate Cmd.\n");
     if (!fdc_cmd(cmd, sizeof(cmd))) {
-        sysPrints("[FDC] Recalibrate Cmd error\n");
+        sysPrints("[FDC] Recalibrate Cmd 오류\n");
         return 0;
     }
     //sysPrints("[FDC] Recalibrate Cmd [OK]\n");
 
     if (!fdc_wait_interrupt())
-        sysPrints("[FDC] wait interrupt error\n");
+        sysPrints("[FDC] 대기 인터럽트 오류\n");
 
     /* get result */
     fdc_sense_interrupt();
 
     if (!fdc_wait_msrStatus(MSR_BUSY, MSR_READY)) {
-        sysPrints("[FDC] Recalibrate  wait fail\n");
+        sysPrints("[FDC] Recalibrate  대기 실패\n");
         return 0;
     }
     return 1;
@@ -349,19 +349,19 @@ static int fdc_seek(unsigned char cyl)
 
     //sysPrints("[FDC] seek cmd check.\n");
     if (!fdc_cmd(cmd, sizeof(cmd))) {
-        sysPrints("[FDC] seek cmd error\n");
+        sysPrints("[FDC] seek cmd 오류\n");
         return 0;
     }
     //sysPrints("[FDC] seek cmd check [OK]\n");
 
     if (!fdc_wait_interrupt()) {
-        sysPrints("[FDC][SEEK] wait interrupt error\n");
+        sysPrints("[FDC][SEEK] 대기 인터럽트 오류\n");
         return 0;
     }
 
     /* get result */
     if (!fdc_sense_interrupt()) {
-        sysPrints("[FDC][SEEK] SIS error\n");
+        sysPrints("[FDC][SEEK] SIS 오류\n");
         return 0;
     }
 
@@ -375,12 +375,12 @@ void* fdc_read(int head, int track, int sector)
     fdc_motor_on();
 
     if (!fdc_recalibrate()) {
-        sysPrints("[FDC][READ] recalibrate error\n");
+        sysPrints("[FDC][READ] 재보정 오류\n");
         return 0;
     }
 
     if (!fdc_seek(track)) {
-        sysPrints("[FDC][READ] seek error\n");
+        sysPrints("[FDC][READ] 탐색 오류\n");
         return 0;
     }
 
@@ -423,13 +423,13 @@ int fdc_write(void* buf, int head, int cyl, int sector)
 
     // sysPrints("FDC_WRITE\n");
     if (!fdc_recalibrate()) {
-        sysPrints("[FDC][WRITE] recalibrate error\n");
+        sysPrints("[FDC][WRITE] recalibrate 오류\n");
         return 0;
     }
 
     // sysPrints("SEEK\n");
     if (!fdc_seek(cyl)) {
-        sysPrints("[FDC][WRITE] seek error\n");
+        sysPrints("[FDC][WRITE] 탐색 오류\n");
         return 0;
     }
 
@@ -451,17 +451,17 @@ int fdc_write(void* buf, int head, int cyl, int sector)
 
     // sysPrints("WRITE\n");
     if (!fdc_cmd(cmd, sizeof(cmd))) {
-        sysPrints("[FDC][WRITE] cmd error\n");
+        sysPrints("[FDC][WRITE] cmd 오류\n");
         return 0;
     }
 
     if (!fdc_wait_interrupt()) {
-        sysPrints("[FDC][WRITE] wait interrupt error\n");
+        sysPrints("[FDC][WRITE] 대기 인터럽트 오류\n");
         return 0;
     }
 
     if (!fdc_read_results()) {
-        sysPrints("[FDC][WRITE] read result error\n");
+        sysPrints("[FDC][WRITE] 결과 읽기 오류\n");
         return 0;
     }
     // sysPrints("WRITE OK\n");
@@ -567,7 +567,7 @@ static int writeBack(FDHANDLE* fh, int fatBits)
   if (!writeFat(fatBits))
     return 0;
 
-  sysPrints("WriteBack succeeded\n");
+  sysPrints("디스크 쓰기 성공\n");
   return 1;
 }
 
@@ -595,16 +595,16 @@ void fd_close(FDHANDLE* fh)
 
         sysPrints("FDC_WRITE\n");
         if (!fdc_recalibrate()) {
-            sysPrints("[FDC][WRITE] recalibrate error\n");
+            sysPrints("[FDC][WRITE] 재보정 오류\n");
         } else {
             if (!writeBack(fh, fatBits)) {
-                sysPrints("WRITE_BACK failed\n");
+                sysPrints("WRITE_BACK 실패\n");
             }
         }
 
         fdc_motor_off();
         }
-        sysPrints("[RAM-DISK] File saved in Memory.\n");
+        sysPrints("[RAM-DISK] 메모리에 파일이 저장되었습니다.\n");
     }
     fh->finfo = 0;
 }
@@ -714,6 +714,15 @@ int fd_read(FDHANDLE* fh, void* dst, int requestSize)
     int readSize = 0;
     unsigned char* p = (unsigned char *)dst;
 
+    // debug---------------------------
+    // char debug[128];
+    // unsigned char* start_src = clusterData(fh->cluster) + (fh->pos % CLUSTER_SIZE);
+    
+    // sprintf(debug, "[KERNEL READ] Clust:%d, Pos:%d, Size:%d, FirstByte:%02X, DstAddr:%08X\n", 
+    //         fh->cluster, fh->pos, fh->finfo->size, *start_src, (int)dst);
+    // sysPrints(debug);
+    // ---------------------------------
+
     while (requestSize > 0) {
         if (fh->pos >= (int)fh->finfo->size) break;
 
@@ -740,30 +749,6 @@ int fd_read(FDHANDLE* fh, void* dst, int requestSize)
         }
     }
 
-    // while (requestSize > 0) {
-    //     if (fh->pos >= (int)fh->finfo->size) {
-    //         break;
-    //     }
-    //     char forward = 1;
-    //     int nextClusterPos = (fh->pos + CLUSTER_SIZE) & -CLUSTER_SIZE;
-    //     if (nextClusterPos > (int)fh->finfo->size) {
-    //         nextClusterPos = fh->finfo->size;
-    //     }
-    //     int blockBytes = nextClusterPos - fh->pos;
-    //     if (blockBytes > requestSize) {
-    //         blockBytes = requestSize;
-    //         forward = 0;
-    //     }
-    //     const unsigned char* src = clusterData(fh->cluster) + (fh->pos % CLUSTER_SIZE);
-    //     memcpy(p, src, blockBytes);
-    //     p += blockBytes;
-    //     fh->pos += blockBytes;
-    //     if (forward) {
-    //         fh->cluster = get_next_cluster(fh->cluster);
-    //     }
-    //     readSize += blockBytes;
-    //     requestSize -= blockBytes;
-    // }
     return readSize;
 }
 
@@ -795,9 +780,9 @@ int fd_write(FDHANDLE* fh, const void* srcData, int requestSize) {
         }
     }
 
-    char debug[64];
-    sprintf(debug, "Source: %x, Cluster: %x, Pos: %d, RS: %d\n", (int)src, fh->cluster, fh->pos, requestSize);
-    sysPrints(debug);
+    // char debug[64];
+    // sprintf(debug, "Source: %x, Cluster: %x, Pos: %d, RS: %d\n", (int)src, fh->cluster, fh->pos, requestSize);
+    // sysPrints(debug);
 
     while (requestSize > 0) {
         int offset_in_cluster = fh->pos % CLUSTER_SIZE;
@@ -806,15 +791,15 @@ int fd_write(FDHANDLE* fh, const void* srcData, int requestSize) {
         int chunk = (requestSize < bytes_available) ? requestSize : bytes_available;
 
         unsigned char* dst = clusterData(fh->cluster) + offset_in_cluster;
-        char debug[64];
+        // char debug[64];
         // dst(목적지), src(소스), chunk(크기), cluster(현재 클러스터) 모두 출력
-        sprintf(debug, "WR: dst=%08X, src=%08X, len=%d, clus=%d\n", 
-                (int)dst, (int)src, chunk, fh->cluster);
-        sysPrints(debug);
+        // sprintf(debug, "WR: dst=%08X, src=%08X, len=%d, clus=%d\n", 
+        //         (int)dst, (int)src, chunk, fh->cluster);
+        // sysPrints(debug);
 
         // [안전장치] 만약 dst가 GDT 영역(0x270000) 근처라면 강제 정지!
         if ((int)dst >= 0x00260000 && (int)dst <= 0x00280000) {
-            sysPrints("[CRITICAL] DETECTED GDT OVERWRITE! STOPPING.\n");
+            sysPrints("[치명적 오류] GDT 영역 침범! 파일쓰기를 중단합니다.\n");
             for(;;) io_hlt(); // 여기서 멈춰서 로그 확인
         }
         memcpy(dst, src, chunk);
@@ -837,42 +822,6 @@ int fd_write(FDHANDLE* fh, const void* srcData, int requestSize) {
             fh->cluster = nextCluster;
         }
     }
-
-    // while (requestSize > 0) {
-    //     if (fh->pos == 0) {  // First write.
-    //         if (fh->finfo->clustno > 0) {  // Exist old file: overwrite.
-    //             fh->cluster = fh->finfo->clustno;
-    //         } else {  // Not exist: allocate new cluster.
-    //             fh->cluster = fh->finfo->clustno = allocate_cluster();
-    //             // TODO: Error check.
-    //         }
-    //     } else if ((fh->pos % CLUSTER_SIZE) == 0) {  // Forward next cluster.
-    //         short nextCluster = get_next_cluster(fh->cluster);
-    //         if (nextCluster < 0xff0) {  // Valid: use it.
-    //             fh->cluster = nextCluster;
-    //         } else {
-    //             nextCluster = allocate_cluster();
-    //             // TODO: Error check.
-    //             set_next_cluster(fh->cluster, nextCluster);
-    //             fh->cluster = nextCluster;
-    //         }
-    //     }
-
-    //     int size = CLUSTER_SIZE - (fh->pos % CLUSTER_SIZE);
-    //     if (requestSize < size) {
-    //         size = requestSize;
-    //     }
-    //     unsigned char* dst = clusterData(fh->cluster) + (fh->pos % CLUSTER_SIZE);
-
-    //     memcpy(dst, src, size);
-    //     fh->pos += size;
-    //     writeSize += size;
-    //     dst += size;
-    //     requestSize -= size;
-    // }
-    // char c[10];
-    // sprintf(c, "Wrote %d bytes.\n", writeSize);
-    // sysPrints(c);
     return writeSize;
 }
 

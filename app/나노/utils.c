@@ -24,6 +24,7 @@
 #include "proto.h"
 #include "compat.h"
 #include "config.h"
+#include "../include/mylib.h"
 
 /* Lower case a string - must be null terminated */
 void lowercase(char *src)

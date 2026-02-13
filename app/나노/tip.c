@@ -31,6 +31,12 @@
 extern char answer[132];
 extern int cur_x;
 
+char *winbuf_global;
+int win_width_global;
+
+struct HANGUL_STATE h_state;
+int lang_mode = 0;
+
 char *skipspace(char *p)
 {
    for (; *p==' '; p++) { }
@@ -499,11 +505,11 @@ int do_yesno(int all, char *msg, ...)
    wattroff(bottomwin, A_REVERSE);
 
    wmove(bottomwin, 1, 0);
-   onekey(" ㅛ", "예");          // " Y" "Yes"
-   if (all) onekey(" ㅁ", "모두");       // " A" "All"
+   onekey(" Y", "예");          // " Y" "Yes"
+   if (all) onekey(" A", "모두");       // " A" "All"
    wmove(bottomwin, 2, 0);
-   onekey(" ㅜ", "아니오");           // " N" "No"
-   onekey("^ㅊ", "취소");       // "^C" "Cancel"
+   onekey(" N", "아니오");           // " N" "No"
+   onekey("^C", "취소");       // "^C" "Cancel"
    
    va_start(ap, msg);
    mini_vsnprintf(foo, 132, msg, ap);
@@ -1558,16 +1564,10 @@ void do_tab(void)
    }
 }
 
-char *winbuf_global;
-int win_width_global;
-
-struct HANGUL_STATE h_state;
-int lang_mode = 0;
-
-void nano_han_flush(struct HANGUL_STATE *h, int key, char *buf, int *pos)
+void nano_han_flush(struct HANGUL_STATE *h, char *buf, int *pos)
 {
    if (h->state != 0) {
-      apihan_run(h, key, buf, pos);
+      apihan_run(h, 0xFFFF, buf, pos);
       *pos = 0;
    }
    return;
@@ -1640,22 +1640,23 @@ void HariMain(void)
 
       switch(key) {
          case 0xFF:
-            if (lang_mode == 1) nano_han_flush(&h_state, key, dummy_buf, &dummy_pos);
+            if (lang_mode == 1) nano_han_flush(&h_state, dummy_buf, &dummy_pos);
             lang_mode ^= 1;
             break;
          case 127:   // backspace
+            if (lang_mode == 1) nano_han_flush(&h_state, dummy_buf, &dummy_pos);
             do_backspace();
             break;
          case 13:
-            if (lang_mode == 1) nano_han_flush(&h_state, key, dummy_buf, &dummy_pos);
+            if (lang_mode == 1) nano_han_flush(&h_state, dummy_buf, &dummy_pos);
             do_enter(current);
             break;
          case 0xFE:     // tab
-            if (lang_mode == 1) nano_han_flush(&h_state, key, dummy_buf, &dummy_pos);
+            if (lang_mode == 1) nano_han_flush(&h_state, dummy_buf, &dummy_pos);
             do_tab();
             break;
          case 8:
-            if (lang_mode == 1) nano_han_flush(&h_state, key, dummy_buf, &dummy_pos);
+            if (lang_mode == 1) nano_han_flush(&h_state, dummy_buf, &dummy_pos);
             wrap_reset();
             do_up();
             update_cursor();
@@ -1663,7 +1664,7 @@ void HariMain(void)
             check_statblank();          
             break;
          case 2:
-            if (lang_mode == 1) nano_han_flush(&h_state, key, dummy_buf, &dummy_pos);
+            if (lang_mode == 1) nano_han_flush(&h_state, dummy_buf, &dummy_pos);
             wrap_reset();
             do_down();
             update_cursor();
@@ -1671,14 +1672,14 @@ void HariMain(void)
             check_statblank();          
             break;
          case 4:
-            if (lang_mode == 1) nano_han_flush(&h_state, key, dummy_buf, &dummy_pos);
+            if (lang_mode == 1) nano_han_flush(&h_state, dummy_buf, &dummy_pos);
             do_left();
             update_cursor();
             keep_cutbuffer = 0;
             check_statblank();          
             break;
          case 6:
-            if (lang_mode == 1) nano_han_flush(&h_state, key, dummy_buf, &dummy_pos);
+            if (lang_mode == 1) nano_han_flush(&h_state, dummy_buf, &dummy_pos);
             do_right();
             update_cursor();
             keep_cutbuffer = 0;

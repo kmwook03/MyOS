@@ -122,34 +122,6 @@ void wmove(void *win, int y, int x)
     cur_x = x;
 }
 
-// void waddstr(void *win, char *str) 
-// {
-//     int px = cur_x * 8 + 8;
-//     int py = cur_y * 16 + 28;
-//     int len = my_strlen(str);
-
-//     int bg_col = (reverse_mode) ? 7 : 0;  
-//     int txt_col = (reverse_mode) ? 0 : 7;
-    
-//     int rect_h = 16;
-//     int rect_w = len * 8;
-
-//     if (winbuf_global != 0) {
-//         int h, w;
-//         for (h = 0; h < rect_h; h++) {
-//             int offset = (py + h) * win_width_global + px;
-
-//             for (w = 0; w < rect_w; w++) {
-//                 winbuf_global[offset + w] = (char)bg_col;
-//             }
-//         }
-//     }
-
-//     api_putstrwin(current_win, px, py, txt_col, len, str);
-
-//     cur_x += len;
-// }
-
 void waddstr(void *win, char *str)
 {
     if (!str) return;
@@ -261,71 +233,6 @@ void endwin(int win) {
 
 void redrawin(int win) {
     api_refreshwin(current_win, 0, 0, 700, 450);
-}
-
-int my_strlen(char *str) {
-    int len = 0;
-    while (*str++) len++;
-    return len;
-}
-
-int my_tolower(int c) {
-    if (c >= 'A' && c <= 'Z') {
-        return c + ('a' - 'A');
-    }
-    return c;
-}
-
-char *my_strcpy(char *dest, const char *src) {
-    char *d = dest;
-    while ((*d++ = *src++) != '\0');
-    return dest;
-}
-
-char *my_strncpy(char *dest, char *src, int n) {
-    char *d = dest;
-    int i;
-    for (i = 0; i < n; i++) {
-        if (src[i] == '\0') {
-            break;
-        }
-        d[i] = src[i];
-    }
-    d[i] = '\0';
-    return dest;
-}
-
-char *my_strstr(char *haystack, char *needle) {
-    char *h, *n;
-
-    if (*needle == 0) {
-        return haystack;
-    }
-
-    for (; *haystack != 0; haystack++) {
-        if (*haystack == *needle) {
-            h = haystack;
-            n = needle;
-            while (*h != 0 && *n != 0 && *h == *n) {
-                h++;
-                n++;
-            }
-
-            if (*n == 0) {
-                return haystack;
-            }
-        }
-    }
-    return 0;
-}
-
-int my_atoi(char *str) {
-    int res = 0;
-    while (*str >= '0' && *str <= '9') {
-        res = res * 10 + (*str - '0');
-        str++;
-    }
-    return res;
 }
 
 /* 현재 커서 위치에 1바이트 삽입 (UTF-8 시퀀스 구성용) */

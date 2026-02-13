@@ -6,7 +6,7 @@
 
 
 static struct HANGUL_STATE h_state;
-static int lang_mode = 0; // 0:Eng, 1:Kor
+static int lang_mode = 1; // 0:Eng, 1:Kor
 
 void console_writer(const char *str, void *aux) {
     api_putstr((char *)str);
@@ -187,3 +187,168 @@ int mini_vsnprintf(char *buf, int size, const char *fmt, va_list ap) {
     *ptr = '\0'; // 널 문자 종료
     return ptr - buf;
 }
+
+int my_strlen(char *str) {
+    int len = 0;
+    while (*str++) len++;
+    return len;
+}
+
+
+int isxdigit(int c) {
+    if (c >= '0' && c <= '9') return 1;
+    if (c >= 'a' && c <= 'f') return 1;
+    if (c >= 'A' && c <= 'F') return 1;
+    return 0;
+}
+
+int is_digits(char *s, int base) {
+    if (*s == '\0') return 0;
+    while (*s) {
+        if (base == 8) {
+            if (*s < '0' || *s > '7') return 0;
+        } else if (base == 10) {
+            if (!isdigit(*s)) return 0;
+        } else if (base == 16) {
+            if (!isxdigit(*s)) return 0;
+        }
+        s++;
+    }
+    return 1;
+}
+
+int isspace(int c) {
+    return (c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r');
+}
+
+int isalpha(int c) {
+    return ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'));
+}
+
+int my_tolower(int c) {
+    if (c >= 'A' && c <= 'Z') {
+        return c + ('a' - 'A');
+    }
+    return c;
+}
+
+char *my_strcpy(char *dest, const char *src) {
+    char *d = dest;
+    while ((*d++ = *src++) != '\0');
+    return dest;
+}
+
+char *my_strncpy(char *dest, char *src, int n) {
+    char *d = dest;
+    int i;
+    for (i = 0; i < n; i++) {
+        if (src[i] == '\0') {
+            break;
+        }
+        d[i] = src[i];
+    }
+    d[i] = '\0';
+    return dest;
+}
+
+char *my_strstr(char *haystack, char *needle) {
+    char *h, *n;
+
+    if (*needle == 0) {
+        return haystack;
+    }
+
+    for (; *haystack != 0; haystack++) {
+        if (*haystack == *needle) {
+            h = haystack;
+            n = needle;
+            while (*h != 0 && *n != 0 && *h == *n) {
+                h++;
+                n++;
+            }
+
+            if (*n == 0) {
+                return haystack;
+            }
+        }
+    }
+    return 0;
+}
+
+int my_atoi(char *str) {
+    int res = 0;
+    while (*str >= '0' && *str <= '9') {
+        res = res * 10 + (*str - '0');
+        str++;
+    }
+    return res;
+}
+
+// long strtol(const char *nptr, char **endptr, int base) {
+//     const char *s = nptr;
+//     unsigned long acc;
+//     int c;
+//     unsigned long cutoff;
+//     int neg = 0, any, cutlim;
+
+//     /* 1. 공백 건너뛰기 */
+//     do {
+//         c = *s++;
+//     } while (c == ' ' || c == '\t' || c == '\n' || c == '\r');
+
+//     if (c == '-') {
+//         neg = 1;
+//         c = *s++;
+//     } else if (c == '+') {
+//         c = *s++;
+//     }
+
+//     /* 2. 진법(Base) 자동 탐지 */
+//     if ((base == 0 || base == 16) &&
+//         c == '0' && (*s == 'x' || *s == 'X')) {
+//         c = s[1];
+//         s += 2;
+//         base = 16;
+//     }
+//     if (base == 0)
+//         base = c == '0' ? 8 : 10;
+
+//     /* 3. 오버플로우 체크용 기준값 설정 (unsigned long 기준) */
+//     /* 간단한 OS용이므로 오버플로우 처리는 최소화하거나 생략해도 되지만, 안전을 위해 포함 */
+//     cutoff = neg ? -(unsigned long)-2147483648 : 2147483647; 
+//     cutlim = cutoff % (unsigned long)base;
+//     cutoff /= (unsigned long)base;
+
+//     /* 4. 변환 루프 */
+//     for (acc = 0, any = 0;; c = *s++) {
+//         if (c >= '0' && c <= '9')
+//             c -= '0';
+//         else if (c >= 'A' && c <= 'Z')
+//             c -= 'A' - 10;
+//         else if (c >= 'a' && c <= 'z')
+//             c -= 'a' - 10;
+//         else
+//             break;
+
+//         if (c >= base)
+//             break;
+
+//         if (any < 0 || acc > cutoff || (acc == cutoff && c > cutlim))
+//             any = -1; // 오버플로우 발생
+//         else {
+//             any = 1;
+//             acc *= base;
+//             acc += c;
+//         }
+//     }
+
+//     if (any < 0) {
+//         acc = neg ? -2147483648 : 2147483647;
+//     } else if (neg)
+//         acc = -acc;
+
+//     if (endptr != 0)
+//         *endptr = (char *)(any ? s - 1 : nptr);
+
+//     return (long)acc;
+// }

@@ -39,12 +39,6 @@ void wattron(void *win, int attr);
 void wattroff(void *win, int attr);
 void endwin(int win);
 void redrawin(int win);
-int my_strlen(char *str);
-int my_tolower(int c);
-char *my_strcpy(char *dest, const char *src);
-char *my_strncpy(char *dest, char *src, int n);
-char *my_strstr(char *haystack, char *needle);
-int my_atoi(char *str);
 
 typedef enum {
     TARGET_EDITOR,

@@ -5,6 +5,8 @@
 #include "error.h"
 #include <string.h>
 #include <stdio.h>
+#include "../include/apilib.h"
+#include "../include/mylib.h"
 
 Value* global_env;
 
@@ -336,6 +338,155 @@ Value* builtin_or(Value* args) {
     }
 }
 
+void trim(char *s) {
+    char *p = s;
+    int l = strlen(p);
+
+    // 1. 뒤쪽 공백/개행 제거
+    while (l > 0 && isspace(p[l - 1])) {
+        p[--l] = 0;
+    }
+
+    // 2. 앞쪽 공백 제거
+    while (*p && isspace(*p)) {
+        ++p, --l;
+    }
+
+    // 3. 문자열 앞으로 당기기
+    if (p != s) {
+        memmove(s, p, l + 1);
+    }
+}
+
+Value* builtin_read(Value* args) {
+    if (!is_nil(args)) {
+        raise_args_error("읽기");
+        return NIL;
+    }
+
+    printf("입력>  ");
+    char buf[256];
+
+    while (1) {
+        gets(buf); 
+        trim(buf);
+        if (strlen(buf) > 0) break;
+    }
+
+    int len = my_strlen(buf);
+    if (len == 0) return NIL;
+
+    if (len > 1 && buf[0] == '0' && buf[1] != 'x' && buf[1] != 'X' && is_digits(buf, 8)) {
+        return mkint((int)strtol(buf, 0, 8));
+    }
+    
+    if (len > 2 && buf[0] == '0' && (buf[1] == 'x' || buf[1] == 'X')) {
+        if (is_digits(buf + 2, 16)) {
+            return mkint((int)strtol(buf + 2, NULL, 16));
+        }
+    }
+
+    if (strncmp(buf, "0육", my_strlen("0육")) == 0) {
+        // "0육" 부분을 "0x"로 간주하고 뒤의 한글(ㄱ~ㅂ)을 A~F로 매핑해야 함.
+        // C언어에서 UTF-8 문자열 치환은 복잡하므로,
+        // 임시 버퍼에 변환된 문자열을 만들어서 strtol에 넘깁니다.
+        
+        char hexbuf[256];
+        int i = my_strlen("0육"); // "0육" 다음부터 읽기
+        int j = 0;
+        int valid = 1;
+
+        while (buf[i] != '\0' && j < 250) {
+            unsigned char c = (unsigned char)buf[i];
+            
+            // 숫자나 a-f, A-F는 그대로 복사
+            if (isxdigit(c)) {
+                hexbuf[j++] = c;
+                i++;
+            } 
+            // 한글 ㄱ~ㅂ 처리 (UTF-8 3바이트)
+            // ㄱ: E3 84 B1 -> A
+            // ㄴ: E3 84 B4 -> B
+            // ㄷ: E3 84 B7 -> C
+            // ㄹ: E3 84 B9 -> D
+            // ㅁ: E3 85 81 -> E
+            // ㅂ: E3 85 82 -> F
+            else if (c == 0xE3) {
+                if (strncmp(&buf[i], "ㄱ", 3) == 0) { hexbuf[j++] = 'A'; i+=3; }
+                else if (strncmp(&buf[i], "ㄴ", 3) == 0) { hexbuf[j++] = 'B'; i+=3; }
+                else if (strncmp(&buf[i], "ㄷ", 3) == 0) { hexbuf[j++] = 'C'; i+=3; }
+                else if (strncmp(&buf[i], "ㄹ", 3) == 0) { hexbuf[j++] = 'D'; i+=3; }
+                else if (strncmp(&buf[i], "ㅁ", 3) == 0) { hexbuf[j++] = 'E'; i+=3; }
+                else if (strncmp(&buf[i], "ㅂ", 3) == 0) { hexbuf[j++] = 'F'; i+=3; }
+                else { valid = 0; break; }
+            } else {
+                valid = 0; break;
+            }
+        }
+        hexbuf[j] = '\0';
+
+        if (valid) {
+            return mkint((int)strtol(hexbuf, NULL, 16));
+        }
+    }
+
+    if (is_digits(buf, 10)) {
+        return mkint(atoi(buf));
+    }
+
+    // (5) 문자열: 양 끝이 " 인 경우
+    if (len >= 2 && buf[0] == '"' && buf[len-1] == '"') {
+        buf[len-1] = '\0'; // 뒷 따옴표 제거
+        return mkstr(buf + 1); // 앞 따옴표 건너뜀
+    }
+
+    // (6) 심볼: 알파벳 등
+    return mksym(buf);
+}
+
+Value* builtin_write(Value* args) {
+    // 1. 인자 확인: 단항 (isunary)
+    if (is_nil(args) || !is_nil(cdr(args))) {
+        raise_args_error("쓰기"); // 파이썬 코드에선 fname="출력" 이지만 함수명은 쓰기
+        return NIL;
+    }
+
+    Value* a = car(args);
+
+    printf("출력>  ");
+    // 2. 타입별 출력
+    switch (a->type) {
+        case T_INTEGER:
+            printf("%d\n", a->as.ival);
+            break;
+        case T_SYMBOL:
+            printf("%s\n", a->as.sval);
+            break;
+        case T_BUILTIN:
+            // print_value는 #<Builtin..>을 찍지만, 쓰기는 그냥 내용을 찍는게 목표라면 확인 필요
+            // 파이썬 코드: print(a, end="") -> __str__ 호출
+            print_value(a); 
+            printf("\n");
+            break;
+        case T_PAIR:
+            print_value(a);
+            break;
+        case T_STRING:
+            printf("%s\n", a->as.sval);
+            break;
+        case T_NIL:
+            printf("()\n");
+            break;
+        default:
+            // Closure, Macro 등
+            print_value(a);
+            printf("\n");
+            break;
+    }
+
+    return NIL;
+}
+
 
 Value* mk_eval(Value* expr, Value* env) {
     if (g_has_error) return NIL;
@@ -500,8 +651,10 @@ void init_eval(void) {
     envset(global_env, mksym("짝?"), mkbuiltin(builtin_ispair));
     envset(global_env, mksym("공?"), mkbuiltin(builtin_isnil));
     envset(global_env, mksym("부정"), mkbuiltin(builtin_not));
-    envset(global_env, mksym("그리고"), mkbuiltin(builtin_and)); // 앞서 추가된 함수
-    envset(global_env, mksym("또는"), mkbuiltin(builtin_or));    // 앞서 추가된 함수
+    envset(global_env, mksym("그리고"), mkbuiltin(builtin_and));
+    envset(global_env, mksym("또는"), mkbuiltin(builtin_or));
+    envset(global_env, mksym("읽기"), mkbuiltin(builtin_read));
+    envset(global_env, mksym("쓰기"), mkbuiltin(builtin_write));
     
     /* 기능 함수 */
     envset(global_env, mksym("적용"), mkbuiltin(builtin_apply));

@@ -135,11 +135,11 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 int *inthandler0c(int *esp);
 int *inthandler0d(int *esp);
 
-// 콘솔 윈도우의 높이는 16의 배수여야 함. (스크롤 함수 때문)
+// 콘솔 윈도우의 높이는 16의 배수여야 함. (스크롤 함수 때문) (512 * 308, 496 * 272)
 #define CONSOLE_WIDTH 512
-#define CONSOLE_HEIGHT 308
+#define CONSOLE_HEIGHT 320
 #define CONSOLE_TBOX_WIDTH 496
-#define CONSOLE_TBOX_HEIGHT 272
+#define CONSOLE_TBOX_HEIGHT 288
 
 // bootpack.c
 struct TASK *open_constask(struct SHEET *sht, unsigned int memtotal, int langmode);

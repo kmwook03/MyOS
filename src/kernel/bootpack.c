@@ -177,51 +177,51 @@ void HariMain(void)
 		}
 		io_cli(); // CPU 인터럽트 비활성화
 		// FIFO 버퍼 상태 확인
-		if (fifo32_status(&fifo) == 0) { 					// fifo가 비어있음
-			if (new_mx >= 0) { 								// 마우스 이동이 있으면
-				io_sti(); 									// CPU 인터럽트 활성화
-				sheet_slide(sht_mouse, new_mx, new_my); 	// 마우스 시트 이동
-				new_mx = -1; 								// 마우스 x 위치 초기화
-			} else if (new_wx != 0x7fffffff) { 				// 윈도우 이동이 있으면
-				io_sti(); 									// CPU 인터럽트 활성화
-				sheet_slide(sht, new_wx, new_wy); 			// 윈도우 시트 이동
-				new_wx = 0x7fffffff; 						// 윈도우 x 위치 초기화
-			} else {										// 할 일이 없으면, 휴면
-            	task_sleep(task_a); 						// 태스크 a 휴면
-				io_sti(); 									// CPU 인터럽트 활성화
+		if (fifo32_status(&fifo) == 0) { 						// fifo가 비어있음
+			if (new_mx >= 0) { 									// 마우스 이동이 있으면
+				io_sti(); 										// CPU 인터럽트 활성화
+				sheet_slide(sht_mouse, new_mx, new_my); 		// 마우스 시트 이동
+				new_mx = -1; 									// 마우스 x 위치 초기화
+			} else if (new_wx != 0x7fffffff) { 					// 윈도우 이동이 있으면
+				io_sti(); 										// CPU 인터럽트 활성화
+				sheet_slide(sht, new_wx, new_wy); 				// 윈도우 시트 이동
+				new_wx = 0x7fffffff; 							// 윈도우 x 위치 초기화
+			} else {											// 할 일이 없으면, 휴면
+            	task_sleep(task_a); 							// 태스크 a 휴면
+				io_sti(); 										// CPU 인터럽트 활성화
 			}
-		} else { 											// fifo가 비어있지 않음
-			i = fifo32_get(&fifo); 							// FIFO 버퍼에서 데이터 가져오기
-			io_sti(); 										// CPU 인터럽트 활성화
-			if (key_win != 0 && key_win->flags == 0) { 		// key_win이 닫혀 있음
-				if (shtctl->top == 1) { 					// 배경 시트만 남음
-					key_win = 0; 							// 활성 윈도우 없음
+		} else { 												// fifo가 비어있지 않음
+			i = fifo32_get(&fifo); 								// FIFO 버퍼에서 데이터 가져오기
+			io_sti(); 											// CPU 인터럽트 활성화
+			if (key_win != 0 && key_win->flags == 0) { 			// key_win이 닫혀 있음
+				if (shtctl->top == 1) { 						// 배경 시트만 남음
+					key_win = 0; 								// 활성 윈도우 없음
 				} else {										// 다음 최상위 시트로 전환
-					key_win = shtctl->sheets[shtctl->top - 1]; // 다음 최상위 시트
+					key_win = shtctl->sheets[shtctl->top - 1]; 	// 다음 최상위 시트
 					keywin_on(key_win); 						// 활성화
 				}
 			}
 			// 키보드 데이터 처리 로직
 			if (256 <= i && i <= 511) {
-                if (i < 256+0x80) { // 문자로 변환
-					if (key_shift == 0) { // 소문자
+                if (i < 256+0x80) { 					// 문자로 변환
+					if (key_shift == 0) { 				// 소문자
 						s[0] = keytable0[i - 256];
-					} else { // 대문자
+					} else { 							// 대문자
 						s[0] = keytable1[i - 256];
 					}
-				} else { // 특수 키
+				} else { 								// 특수 키
 					s[0] = 0;
 				}
-				if ('A' <= s[0] && s[0] <= 'Z') { // 알파벳 문자
+				if ('A' <= s[0] && s[0] <= 'Z') { 					// 알파벳 문자
 					if (((key_leds & 4) == 0 && key_shift == 0) ||
 						((key_leds & 4) != 0 && key_shift != 0)) {
 							s[0] += 0x20; // 소문자로 변환
 					}
 				}
-				if (s[0] != 0 && key_win != 0) { // 출력 가능한 문자
-                    fifo32_put(&key_win->task->fifo, s[0] + 256);
+				if (s[0] != 0 && key_win != 0) { 						// 출력 가능한 문자
+                    fifo32_put(&key_win->task->fifo, s[0] + 256);		// 활성된 윈도우에 문자 전송
                 }
-				if (i == 256 + 0x0f && key_win != 0) { // tab 키 눌림
+				if (i == 256 + 0x0f && key_win != 0) { 					// tab 키 눌림
 					// keywin_off(key_win);
 					// j = key_win->height - 1;
 					// if (j == 0) {

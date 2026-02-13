@@ -1,4 +1,8 @@
-// graphic process
+/**
+ * @file graphic.c
+ * @brief 그래픽 드라이버 관련 함수 구현
+ */
+
 #include "../include/asmfunc.h"
 #include "../include/bootpack.h"
 #include "../include/utf8.h"
@@ -156,20 +160,56 @@ void putfont8(char *vram, int xsize, int x, int y, char c, char *font)
     return;
 }
 
+/**
+ * @brief 한글 및 영문 혼합 문자열 출력 함수
+ * 
+ * 출력해야할 문자의 바이트가 1일 경우 영문자로 간주하여 ASCII로 출력하고
+ * 
+ * 바이트가 3일 경우 한글로 간주하여 UTF-8 -> 조합형 코드 변환 후 한글 출력 함수 호출
+ * 
+ * @param vram: 비디오 메모리 주소
+ * @param xsize: 화면 가로 크기
+ * @param x: 출력할 x 좌표
+ * @param y: 출력할 y 좌표
+ * @param color: 출력할 색상
+ * @param s: 출력할 문자열
+ * @param len: 문자 바이트 수 (1:영문, 3:한글)
+ * @return: void
+ */
 void putfont(char *vram, int xsize, int x, int y, char color, unsigned char *s, int len)
 {
     unsigned char *korean = (unsigned char *) *((int *) 0x0fe8); // 한글 폰트 주소
+    int unicode;
     if (len == 1) {
         if (*s == 0x0A || *s == 0x0D || *s == 0x09) return; // 제어문자 무시
         
         putfont8(vram, xsize, x, y, color, system_font + *s * 16);
     } else if (len == 3) {
         // UTF-8 -> Unicode -> Johab
-        unsigned short johab = utf8_to_johab(s);
-        put_johab(vram, xsize, x, y, color, korean, johab);
+        unicode = ((s[0] & 0x0F) << 12) | ((s[1] & 0x3F) << 6) | (s[2] & 0x3F);
+
+        if ((unicode >= 0xAC00 && unicode <= 0xD7A3)) {
+            unsigned short johab = utf8_to_johab(s);
+            put_johab(vram, xsize, x, y, color, korean, johab);
+        } else if (unicode >= 0x3130 && unicode <= 0x318F) {
+            put_jamo(vram, xsize, x, y, color, korean, unicode);
+        }
     }
 }
 
+/**
+ * @brief 문자열을 비디오 메모리에 출력
+ * 
+ * putfont() 함수를 반복 호출하여 문자열 출력
+ * 
+ * @param vram: 비디오 메모리 주소
+ * @param xsize: 화면 가로 크기
+ * @param x: 출력할 x 좌표
+ * @param y: 출력할 y 좌표
+ * @param c: 출력할 색상
+ * @param s: 출력할 문자열
+ * @return: void
+ */
 void putfonts(char *vram, int xsize, int x, int y, char c, unsigned char *s)
 {
     while (*s != 0x00) {
