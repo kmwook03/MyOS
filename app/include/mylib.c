@@ -29,7 +29,7 @@ char *gets(char *buf) {
         }
 
         /* [Backspace] */
-        if (key == 0x08) {
+        if (key == 0x7F) {
             apihan_backspace(&h_state, buf, &i);
             continue;
         }

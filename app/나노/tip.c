@@ -211,7 +211,17 @@ int tipgetstr(char *buf, char *def, shortcut s[], int slen, int start_x)
 
    mvwaddstr(bottomwin, 0, 0, buf);
 
-   answer[0] = 0;
+   if (def != 0 && def[0] != '\0') {
+      int len = (my_strlen(def) > 130) ? 130 : my_strlen(def);
+      strncpy(answer, def, len);
+      answer[len] = 0;
+
+      i = my_strlen(answer);
+      nano_han_writer(answer, &ctx);
+   } else {
+      answer[0] = 0;
+      i = 0;
+   }
    wrefresh(bottomwin);
 
    int lang_mode = 1; // 0: English, 1: Hangul
@@ -222,6 +232,36 @@ int tipgetstr(char *buf, char *def, shortcut s[], int slen, int start_x)
 
       key = wgetch(edit);
 
+      if (key == 4) {
+         if (i > 0) {
+            int char_len = 1;
+            int visual_len = 1;
+
+            if (i >- 3 && (unsigned char)answer[i-1] >= 0x80) {
+               char_len = 3;
+               visual_len = 2;
+            }
+            i -= char_len;
+            x -= visual_len;
+         }
+         continue;
+      }
+      if (key == 6) {
+         if (answer[i] != 0) {
+            int char_len = 1;
+            int visual_len = 1;
+
+            // 현재 위치의 글자가 한글 시작 바이트(0xE0 이상)인지 확인
+            if ((unsigned char)answer[i] >= 0xE0) {
+               char_len = 3;
+               visual_len = 2;
+            }
+
+            i += char_len;
+            x += visual_len;
+         }
+         continue;
+      }
       if (key == 13) {
          if (lang_mode == 1) {
             apihan_run(&h_state, 0, answer, &i);
@@ -612,7 +652,7 @@ void load_file(void)
    wrefresh(edit);
 }
 
-void open_file(char *filename)
+void open_file(char *f_name)
 {
    long size, totsize = 0, linetemp = 0;
    int fh;
@@ -623,7 +663,7 @@ void open_file(char *filename)
    titlebar();
    fileptr = fileage;
 
-   fh = api_fopen(filename, 0);
+   fh = api_fopen(f_name, 0);
 
    if (fh == 0)	/* We have a new file */
    {
@@ -1188,8 +1228,20 @@ void do_up(void)
 
 void do_right(void)
 {
-   if (current_x < my_strlen(current->data) - 1)
-      current_x++;
+   int char_len = 1;
+   unsigned char ch = (unsigned char)current->data[current_x];
+
+   // 현재 커서 위치의 문자가 몇 바이트짜리인지 확인
+   if (ch >= 0xE0) {       // 1110xxxx: 3바이트 문자 (한글)
+      char_len = 3;
+   } else if (ch >= 0xC0) { // 110xxxxx: 2바이트 문자
+      char_len = 2;
+   } else {                 // 0xxxxxxx: 1바이트 문자 (ASCII)
+      char_len = 1;
+   }
+
+   if (current_x + char_len <= my_strlen(current->data) - 1)
+      current_x += char_len;
    else {
       current_x = 0;
       placewewant = 0;
@@ -1201,11 +1253,16 @@ void do_right(void)
 
 void do_left(void)
 {
-   if (current_x > 0)
-      current_x--;
+   if (current_x > 0) {
+      int step = 1;
+      while (current_x - step > 0 && ((unsigned char)current->data[current_x - step] & 0xC0) == 0x80) {
+         step++;
+      }
+      current_x -= step;
+   }
    else if (current != fileage)
    {
-      current_x = strlen(current->prev->data) - 1;
+      current_x = my_strlen(current->prev->data) - 1;
       placewewant = 0;
       do_up();
    }
@@ -1514,7 +1571,6 @@ int write_file(char *name)
 void do_writeout(void)
 {
    int i;
-
    i = statusq(writefile_list, WRITEFILE_LIST_LEN, filename, 
                   "저장할 파일 이름");         // "File Name to write" 
    if (i != -1)
@@ -1601,8 +1657,11 @@ void HariMain(void)
    if (r != 0) { *r = 0; }
 
    if (q == 0) {
-        q = "파일.txt";          // "newfile.txt"
+        q = "";          // "newfile.txt"
    }
+
+   strncpy(filename, q, 130);
+   filename[130] = '\0';
 
    win = api_openwin(winbuf, win_width, win_height, -1, "나노");     // "nano"
 	api_boxfilwin(win, 6, 27, win_width - 6, win_height - 6, 0);
@@ -1655,7 +1714,7 @@ void HariMain(void)
             if (lang_mode == 1) nano_han_flush(&h_state, dummy_buf, &dummy_pos);
             do_tab();
             break;
-         case 8:
+         case TIP_UP_KEY:
             if (lang_mode == 1) nano_han_flush(&h_state, dummy_buf, &dummy_pos);
             wrap_reset();
             do_up();
@@ -1663,7 +1722,7 @@ void HariMain(void)
             keep_cutbuffer = 0;
             check_statblank();          
             break;
-         case 2:
+         case TIP_DOWN_KEY:
             if (lang_mode == 1) nano_han_flush(&h_state, dummy_buf, &dummy_pos);
             wrap_reset();
             do_down();
@@ -1671,14 +1730,14 @@ void HariMain(void)
             keep_cutbuffer = 0;
             check_statblank();          
             break;
-         case 4:
+         case TIP_LEFT_KEY:
             if (lang_mode == 1) nano_han_flush(&h_state, dummy_buf, &dummy_pos);
             do_left();
             update_cursor();
             keep_cutbuffer = 0;
             check_statblank();          
             break;
-         case 6:
+         case TIP_RIGHT_KEY:
             if (lang_mode == 1) nano_han_flush(&h_state, dummy_buf, &dummy_pos);
             do_right();
             update_cursor();

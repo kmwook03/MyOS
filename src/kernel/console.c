@@ -94,7 +94,7 @@ void console_task(struct SHEET *sht, int memtotal, int langmode)
                 cmd_exit(&cons, fat); // 콘솔 종료
             }
 			if (256 <= i && i <= 511) {
-				if (i == 8 + 256) {                                         // backspace: 지우기
+				if (i == 127 + 256) {                                         // backspace: 지우기
                     if (cons.cur_x > 16) {
                         cons_put_utf8(&cons, " ", 1, 0);                    // 커서 지우기
                                             // 조합 중인 한글 삭제 시도
@@ -237,7 +237,7 @@ void cons_put_utf8(struct CONSOLE *cons, char *s, int len, char move)
         }
     } else if (s[0] == 0x0a) { // 줄바꿈
         cons_newline(cons);
-    } else if (s[0] == 0x08) {
+    } else if (s[0] == 0x7F) { // 백스페이스
         if (cons->cur_x > 0) {
             /* 커서를 한 칸(보통 8픽셀) 앞으로 당김 */
             cons->cur_x -= 8;

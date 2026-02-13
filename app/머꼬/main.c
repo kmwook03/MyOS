@@ -17,7 +17,7 @@ void init_all() {
 
 void load_file(Value* env, char* path) {
     // 1. 파일 열기
-    // printf("디버그: [1] '%s' 파일 여는 중...\n", path);
+    printf("디버그: [1] '%s' 파일 여는 중...\n", path);
     int fh = api_fopen(path, 0);
     if (fh == 0) {
         printf("[Error] 파일 '%s'을(를) 열 수 없습니다.\n", path);
@@ -27,7 +27,7 @@ void load_file(Value* env, char* path) {
     // printf("파일 열기 성공!, 파일 크기 확인 중...\n");
     // 2. 파일 크기 확인 및 버퍼에 읽기
     int filesize = api_fsize(fh, 0);
-    // printf("디버그: [2] 파일 크기: '%d' bytes\n", filesize);
+    printf("디버그: [2] 파일 크기: '%d' bytes\n", filesize);
     if (filesize >= BUFFER_SIZE - 1) { // NULL 문자를 고려하여 버퍼와 크기 비교
         printf("[Error] 파일 '%s'이(가) 너무 큽니다.\n", path);
         api_fclose(fh);
@@ -35,7 +35,7 @@ void load_file(Value* env, char* path) {
     }
     api_fclose(fh);
 
-    // printf("파일 다시 여는 중 (Rewind 효과)...\n");
+    printf("파일 다시 여는 중 (Rewind 효과)...\n");
     fh = api_fopen(path, 0);
 
     if (fh == 0) {
@@ -55,14 +55,14 @@ void load_file(Value* env, char* path) {
 
     // 3. 첫 토큰 읽기
     next_token();
-    // printf("디버그: [4] 첫 토큰: [%s]\n", get_current_token());
+    printf("디버그: [4] 첫 토큰: [%s]\n", get_current_token());
 
     int loop_cnt = 0;
 
     // 4. 파일 읽고 실행하기
     while (1) {
         loop_cnt++;
-        // printf("디버그: [루프 %d] 시작. 현재 토큰: [%s]\n", loop_cnt, get_current_token());
+        printf("디버그: [루프 %d] 시작. 현재 토큰: [%s]\n", loop_cnt, get_current_token());
         // 에러 상태면 중단
         if (g_has_error) {
             printf("오류 발생으로 로딩을 중단합니다.\n");
@@ -73,7 +73,7 @@ void load_file(Value* env, char* path) {
         // EOF 확인 (토큰이 없으면 종료)
         // parse.c 로직상 depth가 0일 때 버퍼 끝에 도달하면 "" 토큰을 반환하고 종료함
         if (get_current_token()[0] == '\0') {
-            // printf("디버그: EOF. 루프 탈출\n");
+            printf("디버그: EOF. 루프 탈출\n");
             break;
         }
 

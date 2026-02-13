@@ -69,6 +69,11 @@
 #define TIP_REFRESH_KEY		TIP_CONTROL_L
 #define TIP_SPELL_KEY		TIP_CONTROL_T
 
+#define TIP_LEFT_KEY      4
+#define TIP_RIGHT_KEY     6
+#define TIP_UP_KEY        8
+#define TIP_DOWN_KEY      2
+
 typedef struct filestruct {
     char *data;
     struct filestruct *next;	/* Next node */

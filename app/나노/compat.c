@@ -53,10 +53,6 @@ int wgetch(void *win)
         if (key == 0x0A) {
             return 13;
         }
-
-        if (key == 0x08) {
-            return 127;
-        }
         
         ctrl_pressed = 0; // Reset Ctrl State if no Ctrl combination matched
         return key;
